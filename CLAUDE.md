@@ -529,3 +529,208 @@ class YourApplication:
 - For persistence across sessions, implement file-based save/load using JSON
 - All scripts must use the exact same `APP_KEY` value
 - The singleton pattern works because all scripts share the same JVM instance
+
+---
+
+# TopSpin Sample Manager Implementation Plan
+
+## Project Overview
+
+Build a **standalone Jython/Swing application** that runs entirely within TopSpin, using the same JSON schema for compatibility with the existing web app. The application will be completely independent - no interaction with the web app.
+
+## Core Requirements
+
+### 1. Main Command: `samples`
+- Launches persistent Jython/Swing GUI using System Properties singleton pattern
+- Auto-navigates to current dataset directory using `CURDATA()`
+- Full feature set: browse, list, create, edit, duplicate, eject, timeline
+
+### 2. Integration Commands
+- `aij` - Auto-inject: calls main app to create new sample, then performs physical injection
+- `aej` - Auto-eject: calls main app to eject sample, then performs physical ejection
+- `asx` - (LOW PRIORITY) Auto sample exchange with SampleJet
+
+### 3. GUI Features (matching web app)
+- **Directory navigation** - Root directory, current experiment folder
+- **Sample list** - All samples in current directory with status indicators
+- **Form interface** - Auto-generated from JSON schema using pure Swing
+- **Timeline view** - Interleaved samples + experiment directories
+- **Buttons** - New Sample, Duplicate, Edit, Eject (both virtual and physical)
+
+## Technical Specifications
+
+### Form Generation from Schema
+- **Pure Swing components** - no React, dynamically built from `schemas/current.json`
+- **Field types**: text inputs, number inputs, dropdowns (enums), array fields (add/remove)
+- **Nested structures**: Sample.Components, Buffer.Components as scrollable panels
+- **Optional fields**: All fields are optional per schema
+- **Validation**: Use JSON schema rules (min/max, patterns, required arrays)
+
+### Sample State Model
+- **Active sample**: No `ejected_timestamp` in Metadata
+- **Auto-eject**: Creating new sample automatically ejects any active sample in directory
+- **One active rule**: Enforce one active sample per directory (physically impossible otherwise)
+- **Timestamps**:
+  - `created_timestamp` - set on creation
+  - `modified_timestamp` - updated on every save
+  - `ejected_timestamp` - set on ejection
+
+### Timeline Implementation
+- **Experiment directories**: Integer-named folders containing `acqus` file
+- **Sample events**: Created/Ejected with timestamps
+- **Sorting**: Chronological order by timestamp/directory number
+- **Double-click**: Open dataset in TopSpin when user double-clicks experiment
+- **Reference**: See `info/js/file-manager.js` for web app parsing logic
+
+### File Naming Convention
+```
+YYYY-MM-DD_HHMMSS_samplename.json
+2025-08-21_143022_lysozyme.json
+```
+
+## TopSpin API Functions
+
+### Core Functions Available
+```python
+# Dataset operations
+CURDATA()  # Returns [name, expno, procno, directory]
+RE(dataset)  # Read experiment, make it current
+
+# Parameters
+GETPAR(name, axis=0)  # Get parameter value
+PUTPAR(name, value)  # Set parameter value
+
+# Dialogs
+MSG(message)  # Show message dialog
+CONFIRM(title, message)  # Show confirm dialog
+INPUT_DIALOG(...)  # Input dialog with multiple fields
+
+# File operations
+import json  # Standard Python JSON module
+import os    # File system operations
+```
+
+### API Functions Needing Documentation/Placeholders
+```python
+# TODO: Check documentation or use placeholders
+# Opening datasets in TopSpin - RE()? XCMD()?
+# Getting current user - GETPAR? System property?
+# Physical inject command - MSG("Inject sample now!") for now
+# Physical eject command - MSG("Eject sample now!") for now
+```
+
+## Directory Structure
+
+```
+/exp/stan/nmr/py/user/sample-manager/
+├── src/
+│   ├── schemas/
+│   │   ├── current.json → v0.0.1.json (symlink or copy)
+│   │   └── v0.0.1.json
+│   ├── samples.py          # Main GUI application
+│   ├── aij.py              # Auto-inject command
+│   ├── aej.py              # Auto-eject command
+│   └── lib/
+│       ├── schema_form.py   # Schema -> Swing form generator
+│       ├── sample_io.py     # JSON file operations
+│       └── timeline.py      # Timeline view logic
+├── info/                    # Reference materials
+│   ├── js/                  # Web app code (for reference)
+│   ├── *.png                # Screenshots
+│   └── usage.html
+├── CLAUDE.md
+└── README.md
+```
+
+## Implementation Phases
+
+### Phase 1: Core Infrastructure
+- [x] Initialize git repository
+- [x] Create .gitignore
+- [ ] Main application singleton pattern (`samples.py`)
+- [ ] Schema loading and validation
+- [ ] JSON file I/O with proper timestamping
+- [ ] Basic directory navigation
+
+### Phase 2: Sample Management
+- [ ] Sample list display (with status: active/ejected)
+- [ ] Create new sample (auto-eject previous)
+- [ ] Edit existing sample
+- [ ] Duplicate sample
+- [ ] Eject sample (virtual timestamp)
+
+### Phase 3: Form Generation
+- [ ] Parse JSON schema
+- [ ] Generate Swing components dynamically
+- [ ] Handle nested objects (Sample.Components, etc.)
+- [ ] Handle arrays with add/remove buttons
+- [ ] Field validation from schema
+
+### Phase 4: Timeline View
+- [ ] Scan directory for experiment folders (integer + acqus)
+- [ ] Parse sample timestamps
+- [ ] Merge and sort chronologically
+- [ ] Display in table/list
+- [ ] Double-click to open dataset in TopSpin
+
+### Phase 5: Integration Commands
+- [ ] `aij` - retrieve app, call inject method
+- [ ] `aej` - retrieve app, call eject method
+- [ ] Physical inject/eject placeholders or real commands
+
+### Phase 6: Polish
+- [ ] Error handling and user feedback
+- [ ] Status bar with current directory
+- [ ] Keyboard shortcuts
+- [ ] Help/documentation
+
+## Key Design Decisions
+
+### Why Pure Swing Forms?
+- **Maximum compatibility** - Swing is part of Java standard library
+- **No dependencies** - Works in Jython 2.7.2 out of the box
+- **Schema-driven** - Future-proof, forms update automatically when schema changes
+- **Self-contained** - No external processes or web views
+
+### Why Independent from Web App?
+- **Different environments** - Web (File System Access API) vs. Jython (file I/O)
+- **Different use cases** - Web for general use, TopSpin for integrated workflow
+- **Same data** - Both read/write identical JSON files following same schema
+
+### Sample Injection/Ejection Workflow
+```
+User workflow:
+1. User loads sample into spectrometer
+2. User runs `samples` command OR `aij` command
+3. App creates JSON file with timestamp (= injection time)
+4. Previous active sample auto-ejected if exists
+5. User collects data...
+6. User runs `aej` command or uses Eject button
+7. App adds ejected_timestamp to JSON
+8. Sample marked as complete
+```
+
+## Testing Strategy
+
+1. **Schema validation** - Test all field types, nested structures, arrays
+2. **File I/O** - Create, read, update samples with proper timestamps
+3. **Timeline** - Mix of samples and experiments, proper chronological ordering
+4. **State persistence** - Close/reopen app, verify state maintained
+5. **Auto-eject** - Creating new sample properly ejects previous active
+6. **Edge cases** - Empty directories, missing acqus files, malformed JSON
+
+## Reference Materials
+
+- **TopSpin Jython API**: `info/python-programming.pdf`
+- **Web app code**: `info/js/*.js` (for timeline parsing logic)
+- **Screenshots**: `info/*.png` (for UI reference)
+- **Schema**: `src/schemas/current.json`
+
+## Development Notes
+
+- Use `MSG()` for debugging during development
+- Test with real TopSpin data directories
+- Follow Jython 2.7.2 syntax (no Python 3 features)
+- Keep forms simple but functional - usability over aesthetics
+- Prioritize correctness of data handling over GUI polish
+- Automatic testing is NOT available - developer will need to test features and code manually
