@@ -5,6 +5,7 @@ Dynamically generates Swing forms from JSON Schema
 """
 
 from javax.swing import *
+from javax.swing.event import DocumentListener
 from java.awt import *
 import json
 from collections import OrderedDict
@@ -21,6 +22,7 @@ class SchemaFormGenerator:
         self.schema = self._load_schema(schema_path)
         self.components = {}  # Map field paths to components
         self.data = {}  # Current form data
+        self.app = None  # Reference to app for modification tracking
 
     @staticmethod
     def _load_schema(schema_path):
@@ -31,13 +33,15 @@ class SchemaFormGenerator:
         except (IOError, ValueError) as e:
             raise Exception("Failed to load schema: %s" % str(e))
 
-    def create_form_panel(self):
+    def create_form_panel(self, app=None):
         """Create main form panel with all fields"""
         # Clear components dictionary for fresh form
         self.components = {}
+        self.app = app  # Store app reference for modification tracking
 
         panel = JPanel()
         panel.setLayout(BoxLayout(panel, BoxLayout.Y_AXIS))
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10))
 
         # Get properties from schema - preserve order
         properties = self.schema.get('properties', {})
@@ -46,22 +50,109 @@ class SchemaFormGenerator:
         # Note: In Python 2.7+ dicts maintain insertion order in CPython,
         # but JSON parsing should preserve order from file
         for prop_name, prop_schema in properties.items():
-            # Skip Metadata section - will be read-only and handled separately
+            # Handle Metadata section as read-only
             if prop_name == 'Metadata':
-                continue
+                section_panel = self._create_metadata_section(prop_name, prop_schema)
+            else:
+                section_panel = self._create_section(prop_name, prop_schema)
 
-            section_panel = self._create_section(prop_name, prop_schema)
             if section_panel:
                 panel.add(section_panel)
-                panel.add(Box.createVerticalStrut(10))
+                panel.add(Box.createVerticalStrut(15))
 
-        return JScrollPane(panel)
+        # Wrap in scroll pane with better scrolling
+        scroll_pane = JScrollPane(panel)
+        scroll_pane.getVerticalScrollBar().setUnitIncrement(16)
+        scroll_pane.getVerticalScrollBar().setBlockIncrement(50)
+        scroll_pane.setBorder(None)  # Remove border to avoid visual clutter
+        return scroll_pane
+
+    def _mark_modified(self):
+        """Mark form as modified in parent app"""
+        if self.app and hasattr(self.app, 'mark_form_modified'):
+            self.app.mark_form_modified()
+
+    def _create_metadata_section(self, section_name, section_schema):
+        """Create read-only metadata section"""
+        section_panel = JPanel()
+        section_panel.setLayout(BoxLayout(section_panel, BoxLayout.Y_AXIS))
+
+        # Create titled border with bold font
+        titled_border = BorderFactory.createTitledBorder(
+            BorderFactory.createEtchedBorder(),
+            section_name + " (read-only)",
+            0,  # TitledBorder.DEFAULT_JUSTIFICATION
+            0,  # TitledBorder.DEFAULT_POSITION
+            Font("Dialog", Font.BOLD, 12)
+        )
+        section_panel.setBorder(BorderFactory.createCompoundBorder(
+            titled_border,
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ))
+
+        # Get metadata properties
+        obj_properties = section_schema.get('properties', {})
+        for prop_name, prop_schema in obj_properties.items():
+            field_path = "%s.%s" % (section_name, prop_name)
+
+            # Create read-only field
+            field_panel = JPanel(GridBagLayout())
+            gbc = GridBagConstraints()
+            gbc.insets = Insets(5, 10, 5, 10)
+            gbc.anchor = GridBagConstraints.WEST
+
+            # Label
+            jlabel = JLabel("%s:" % prop_name)
+            jlabel.setFont(jlabel.getFont().deriveFont(11.0))
+            description = prop_schema.get('description', '')
+            if description:
+                jlabel.setToolTipText(description)
+
+            gbc.gridx = 0
+            gbc.gridy = 0
+            gbc.weightx = 0.0
+            gbc.fill = GridBagConstraints.NONE
+            field_panel.add(jlabel, gbc)
+
+            # Read-only text field
+            text_field = JTextField()
+            text_field.setPreferredSize(Dimension(300, 24))
+            text_field.setEditable(False)
+            text_field.setBackground(Color(240, 240, 240))  # Light grey background
+            if description:
+                text_field.setToolTipText(description)
+
+            gbc.gridx = 1
+            gbc.gridy = 0
+            gbc.weightx = 1.0
+            gbc.fill = GridBagConstraints.HORIZONTAL
+            field_panel.add(text_field, gbc)
+
+            # Store component for loading data
+            self.components[field_path] = text_field
+
+            section_panel.add(field_panel)
+            section_panel.add(Box.createVerticalStrut(5))
+
+        return section_panel
 
     def _create_section(self, section_name, section_schema):
         """Create a collapsible section for a schema property"""
         section_panel = JPanel()
         section_panel.setLayout(BoxLayout(section_panel, BoxLayout.Y_AXIS))
-        section_panel.setBorder(BorderFactory.createTitledBorder(section_name))
+
+        # Create titled border with bold font
+        titled_border = BorderFactory.createTitledBorder(
+            BorderFactory.createEtchedBorder(),
+            section_name,
+            0,  # TitledBorder.DEFAULT_JUSTIFICATION
+            0,  # TitledBorder.DEFAULT_POSITION
+            Font("Dialog", Font.BOLD, 12)
+        )
+        section_panel.setBorder(BorderFactory.createCompoundBorder(
+            titled_border,
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ))
 
         prop_type = section_schema.get('type')
 
@@ -95,14 +186,22 @@ class SchemaFormGenerator:
         enum_values = field_schema.get('enum')
         description = field_schema.get('description', '')
 
-        field_panel = JPanel()
-        field_panel.setLayout(BorderLayout())
+        field_panel = JPanel(GridBagLayout())
+        gbc = GridBagConstraints()
+        gbc.insets = Insets(5, 10, 5, 10)
+        gbc.anchor = GridBagConstraints.WEST
 
         # Create label with tooltip if description exists
         jlabel = JLabel("%s:" % label)
+        jlabel.setFont(jlabel.getFont().deriveFont(11.0))
         if description:
             jlabel.setToolTipText(description)
-        field_panel.add(jlabel, BorderLayout.WEST)
+
+        gbc.gridx = 0
+        gbc.gridy = 0
+        gbc.weightx = 0.0
+        gbc.fill = GridBagConstraints.NONE
+        field_panel.add(jlabel, gbc)
 
         # Create input component based on type
         component = None
@@ -111,6 +210,7 @@ class SchemaFormGenerator:
             # Dropdown for enum values
             component = JComboBox(enum_values)
             component.setEditable(False)
+            component.addActionListener(lambda e: self._mark_modified())
             if description:
                 component.setToolTipText(description)
         elif field_type == 'array':
@@ -118,7 +218,10 @@ class SchemaFormGenerator:
             component = self._create_array_field(field_path, field_schema)
         elif field_type == 'number' or field_type == ['number', 'null']:
             # Number input with tooltip
-            component = JTextField(10)
+            component = JTextField()
+            component.setPreferredSize(Dimension(150, 24))
+            component.getDocument().addDocumentListener(FormModificationListener(self))
+            # No maximum size - allow resizing
             if description:
                 component.setToolTipText(description)
         elif field_type == 'string' or field_type == ['string']:
@@ -128,12 +231,16 @@ class SchemaFormGenerator:
                 text_area = JTextArea(4, 30)
                 text_area.setLineWrap(True)
                 text_area.setWrapStyleWord(True)
+                text_area.getDocument().addDocumentListener(FormModificationListener(self))
                 if description:
                     text_area.setToolTipText(description)
                 component = JScrollPane(text_area)
                 self.components[field_path] = text_area  # Store text area, not scroll pane
             else:
-                component = JTextField(30)
+                component = JTextField()
+                component.setPreferredSize(Dimension(300, 24))
+                component.getDocument().addDocumentListener(FormModificationListener(self))
+                # No maximum size - allow resizing with window
                 if description:
                     component.setToolTipText(description)
         elif field_type == 'object':
@@ -141,7 +248,10 @@ class SchemaFormGenerator:
             component = self._create_nested_object_field(field_path, field_schema)
         else:
             # Default to text field
-            component = JTextField(30)
+            component = JTextField()
+            component.setPreferredSize(Dimension(300, 24))
+            component.getDocument().addDocumentListener(FormModificationListener(self))
+            # No maximum size - allow resizing with window
             if description:
                 component.setToolTipText(description)
 
@@ -149,7 +259,11 @@ class SchemaFormGenerator:
             self.components[field_path] = component
 
         if component:
-            field_panel.add(component, BorderLayout.CENTER)
+            gbc.gridx = 1
+            gbc.gridy = 0
+            gbc.weightx = 1.0
+            gbc.fill = GridBagConstraints.HORIZONTAL
+            field_panel.add(component, gbc)
             return field_panel
 
         return None
@@ -158,16 +272,33 @@ class SchemaFormGenerator:
         """Create array field with add/remove functionality"""
         array_panel = JPanel()
         array_panel.setLayout(BoxLayout(array_panel, BoxLayout.Y_AXIS))
+        array_panel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0))
 
         items_schema = field_schema.get('items', {})
         item_type = items_schema.get('type')
 
+        # Add instruction label for arrays
+        if item_type == 'object':
+            instruction = JLabel("Components:")
+            instruction.setFont(instruction.getFont().deriveFont(Font.ITALIC, 10.0))
+            instruction.setAlignmentX(Component.LEFT_ALIGNMENT)
+            array_panel.add(instruction)
+            array_panel.add(Box.createVerticalStrut(5))
+        elif item_type == 'string':
+            instruction = JLabel("Add items below:")
+            instruction.setFont(instruction.getFont().deriveFont(Font.ITALIC, 10.0))
+            instruction.setAlignmentX(Component.LEFT_ALIGNMENT)
+            array_panel.add(instruction)
+            array_panel.add(Box.createVerticalStrut(5))
+
         # List to hold array items
         items_list = []
 
-        # Panel to hold item components
+        # Panel to hold item components with subtle background
         items_container = JPanel()
         items_container.setLayout(BoxLayout(items_container, BoxLayout.Y_AXIS))
+        items_container.setBackground(Color(250, 250, 250))
+        items_container.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5))
 
         def add_item():
             """Add new item to array"""
@@ -195,12 +326,16 @@ class SchemaFormGenerator:
             items_container.revalidate()
             items_container.repaint()
 
-        # Add button
-        add_btn = JButton('Add')
+        # Add button in its own panel for better alignment
+        button_panel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 5))
+        button_panel.setAlignmentX(Component.LEFT_ALIGNMENT)
+        add_btn = JButton('+ Add')
+        add_btn.setPreferredSize(Dimension(80, 26))
         add_btn.addActionListener(lambda e: add_item())
+        button_panel.add(add_btn)
 
         array_panel.add(items_container)
-        array_panel.add(add_btn)
+        array_panel.add(button_panel)
 
         # Store reference
         self.components[field_path] = {'container': items_container, 'items': items_list, 'schema': items_schema}
@@ -211,7 +346,12 @@ class SchemaFormGenerator:
         """Create a single object item in an array"""
         item_panel = JPanel()
         item_panel.setLayout(BoxLayout(item_panel, BoxLayout.Y_AXIS))
-        item_panel.setBorder(BorderFactory.createEtchedBorder())
+        item_panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color(200, 200, 200), 1),
+            BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ))
+        item_panel.setBackground(Color.WHITE)
+        item_panel.setAlignmentX(Component.LEFT_ALIGNMENT)
 
         item_components = {}
 
@@ -334,7 +474,12 @@ class SchemaFormGenerator:
                 item_components = {}
                 item_panel = JPanel()
                 item_panel.setLayout(BoxLayout(item_panel, BoxLayout.Y_AXIS))
-                item_panel.setBorder(BorderFactory.createEtchedBorder())
+                item_panel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(Color(200, 200, 200), 1),
+                    BorderFactory.createEmptyBorder(8, 8, 8, 8)
+                ))
+                item_panel.setBackground(Color.WHITE)
+                item_panel.setAlignmentX(Component.LEFT_ALIGNMENT)
 
                 # Create fields for object properties
                 item_properties = items_schema.get('properties', {})
@@ -481,3 +626,19 @@ class SchemaFormGenerator:
             current = current[key]
 
         current[keys[-1]] = value
+
+
+class FormModificationListener(DocumentListener):
+    """Document listener to track form modifications"""
+
+    def __init__(self, form_generator):
+        self.form_generator = form_generator
+
+    def insertUpdate(self, event):
+        self.form_generator._mark_modified()
+
+    def removeUpdate(self, event):
+        self.form_generator._mark_modified()
+
+    def changedUpdate(self, event):
+        self.form_generator._mark_modified()
