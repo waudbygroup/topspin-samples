@@ -644,45 +644,46 @@ import os    # File system operations
 
 ## Implementation Phases
 
-### Phase 1: Core Infrastructure
+### Phase 1: Core Infrastructure ✓ COMPLETE
 - [x] Initialize git repository
 - [x] Create .gitignore
-- [ ] Main application singleton pattern (`samples.py`)
-- [ ] Schema loading and validation
-- [ ] JSON file I/O with proper timestamping
-- [ ] Basic directory navigation
+- [x] Main application singleton pattern (`samples.py`)
+- [x] Schema loading and validation
+- [x] JSON file I/O with proper timestamping
+- [x] Basic directory navigation
 
-### Phase 2: Sample Management
-- [ ] Sample list display (with status: active/ejected)
-- [ ] Create new sample (auto-eject previous)
-- [ ] Edit existing sample
-- [ ] Duplicate sample
-- [ ] Eject sample (virtual timestamp)
+### Phase 2: Sample Management ✓ COMPLETE
+- [x] Sample list display (with status: active/ejected)
+- [x] Create new sample (auto-eject previous)
+- [x] Edit existing sample
+- [x] Duplicate sample
+- [x] Eject sample (virtual timestamp)
 
-### Phase 3: Form Generation
-- [ ] Parse JSON schema
-- [ ] Generate Swing components dynamically
-- [ ] Handle nested objects (Sample.Components, etc.)
-- [ ] Handle arrays with add/remove buttons
-- [ ] Field validation from schema
+### Phase 3: Form Generation ✓ COMPLETE
+- [x] Parse JSON schema
+- [x] Generate Swing components dynamically
+- [x] Handle nested objects (Sample.Components, etc.)
+- [x] Handle arrays with add/remove buttons
+- [x] Field validation from schema
 
-### Phase 4: Timeline View
-- [ ] Scan directory for experiment folders (integer + acqus)
-- [ ] Parse sample timestamps
-- [ ] Merge and sort chronologically
-- [ ] Display in table/list
-- [ ] Double-click to open dataset in TopSpin
+### Phase 4: Timeline View ✓ COMPLETE
+- [x] Scan directory for experiment folders (integer + acqus)
+- [x] Parse sample timestamps
+- [x] Merge and sort chronologically
+- [x] Display in table/list
+- [x] Double-click to open dataset in TopSpin
 
-### Phase 5: Integration Commands
-- [ ] `aij` - retrieve app, call inject method
-- [ ] `aej` - retrieve app, call eject method
-- [ ] Physical inject/eject placeholders or real commands
+### Phase 5: Integration Commands ✓ COMPLETE
+- [x] `aij` - retrieve app, call inject method
+- [x] `aej` - retrieve app, call eject method
+- [x] Physical inject/eject placeholders (MSG for now)
 
-### Phase 6: Polish
-- [ ] Error handling and user feedback
-- [ ] Status bar with current directory
+### Phase 6: Polish - IN PROGRESS
+- [x] Error handling and user feedback
+- [x] Status bar with current directory
 - [ ] Keyboard shortcuts
 - [ ] Help/documentation
+- [ ] Real-world testing in TopSpin environment
 
 ## Key Design Decisions
 
