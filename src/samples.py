@@ -44,7 +44,8 @@ class SampleManagerApp:
         except NameError:
             script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 
-        self.schema_path = os.path.join(script_dir, 'schemas', 'current.json')
+        self.script_dir = script_dir
+        self.current_schema_path = os.path.join(script_dir, 'schemas', 'current.json')
         self.form_generator = None
         self.current_sample_file = None
         self.timeline_builder = TimelineBuilder(self.sample_io)
@@ -268,6 +269,16 @@ class SampleManagerApp:
         except Exception as e:
             self.update_status("Error refreshing sample list: %s" % str(e))
 
+    def _get_schema_path_for_version(self, version):
+        """Get schema path for a specific version"""
+        # Try to load the specific version
+        versioned_path = os.path.join(self.script_dir, 'schemas', 'v%s.json' % version)
+        if os.path.exists(versioned_path):
+            return versioned_path
+
+        # Fall back to current schema if version not found
+        return self.current_schema_path
+
     def _on_sample_selected(self):
         """Handle sample selection"""
         selected = self.sample_list.getSelectedValue()
@@ -290,8 +301,12 @@ class SampleManagerApp:
             filepath = os.path.join(self.current_directory, filename)
             data = self.sample_io.read_sample(filepath)
 
+            # Determine which schema to use for editing
+            schema_version = data.get('Metadata', {}).get('schema_version', '0.0.1')
+            schema_path = self._get_schema_path_for_version(schema_version)
+
             # Always create a fresh form generator to avoid stale component references
-            self.form_generator = SchemaFormGenerator(self.schema_path)
+            self.form_generator = SchemaFormGenerator(schema_path)
 
             # Create form panel first
             self.form_panel.removeAll()
@@ -304,7 +319,7 @@ class SampleManagerApp:
             self.form_panel.revalidate()
             self.form_panel.repaint()
 
-            self.update_status("Loaded sample: %s" % filename)
+            self.update_status("Loaded sample: %s (schema v%s)" % (filename, schema_version))
 
         except Exception as e:
             self.update_status("Error loading sample: %s" % str(e))
@@ -319,8 +334,8 @@ class SampleManagerApp:
         except Exception as e:
             self.update_status("Warning: Could not auto-eject: %s" % str(e))
 
-        # Create fresh form generator
-        self.form_generator = SchemaFormGenerator(self.schema_path)
+        # Create fresh form generator using CURRENT schema for new samples
+        self.form_generator = SchemaFormGenerator(self.current_schema_path)
 
         # Create empty form
         self.form_panel.removeAll()
@@ -343,14 +358,15 @@ class SampleManagerApp:
             filepath = os.path.join(self.current_directory, self.current_sample_file)
             data = self.sample_io.read_sample(filepath)
 
-            # Remove metadata timestamps
+            # Remove metadata timestamps - will be regenerated with current schema
             if 'Metadata' in data:
                 data['Metadata'].pop('created_timestamp', None)
                 data['Metadata'].pop('modified_timestamp', None)
                 data['Metadata'].pop('ejected_timestamp', None)
+                data['Metadata'].pop('schema_version', None)
 
-            # Create fresh form generator
-            self.form_generator = SchemaFormGenerator(self.schema_path)
+            # Create fresh form generator using CURRENT schema for duplicates
+            self.form_generator = SchemaFormGenerator(self.current_schema_path)
 
             # Create form first
             self.form_panel.removeAll()
@@ -485,7 +501,10 @@ class SampleManagerApp:
                 procno = 1  # Default to procno 1
 
                 # Use RE() to open the experiment
-                RE([name, expno, procno, grandparent_dir])
+                # RE() needs a Java String array, so we need to convert properly
+                from jarray import array
+                dataset = array([name, str(expno), str(procno), grandparent_dir], 'java.lang.String')
+                RE(dataset)
                 self.update_status("Opened experiment %s/%d" % (name, expno))
 
             except Exception as e:

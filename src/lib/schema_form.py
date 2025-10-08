@@ -7,6 +7,10 @@ Dynamically generates Swing forms from JSON Schema
 from javax.swing import *
 from java.awt import *
 import json
+from collections import OrderedDict
+
+# Import Box for vertical spacing
+from javax.swing import Box
 
 
 class SchemaFormGenerator:
@@ -20,10 +24,10 @@ class SchemaFormGenerator:
 
     @staticmethod
     def _load_schema(schema_path):
-        """Load JSON schema file"""
+        """Load JSON schema file preserving property order"""
         try:
             with open(schema_path, 'r') as f:
-                return json.load(f)
+                return json.load(f, object_pairs_hook=OrderedDict)
         except (IOError, ValueError) as e:
             raise Exception("Failed to load schema: %s" % str(e))
 
@@ -35,16 +39,21 @@ class SchemaFormGenerator:
         panel = JPanel()
         panel.setLayout(BoxLayout(panel, BoxLayout.Y_AXIS))
 
-        # Get properties from schema
+        # Get properties from schema - preserve order
         properties = self.schema.get('properties', {})
 
-        # Create sections for each top-level property
-        for prop_name in ['Users', 'Sample', 'Buffer', 'NMR Tube', 'Laboratory Reference', 'Notes']:
-            if prop_name in properties:
-                section_panel = self._create_section(prop_name, properties[prop_name])
-                if section_panel:
-                    panel.add(section_panel)
-                    panel.add(Box.createVerticalStrut(10))
+        # Create sections for each top-level property in schema order
+        # Note: In Python 2.7+ dicts maintain insertion order in CPython,
+        # but JSON parsing should preserve order from file
+        for prop_name, prop_schema in properties.items():
+            # Skip Metadata section - will be read-only and handled separately
+            if prop_name == 'Metadata':
+                continue
+
+            section_panel = self._create_section(prop_name, prop_schema)
+            if section_panel:
+                panel.add(section_panel)
+                panel.add(Box.createVerticalStrut(10))
 
         return JScrollPane(panel)
 
@@ -89,11 +98,10 @@ class SchemaFormGenerator:
         field_panel = JPanel()
         field_panel.setLayout(BorderLayout())
 
-        # Create label
-        label_text = "%s:" % label
+        # Create label with tooltip if description exists
+        jlabel = JLabel("%s:" % label)
         if description:
-            label_text = "%s (%s):" % (label, description)
-        jlabel = JLabel(label_text)
+            jlabel.setToolTipText(description)
         field_panel.add(jlabel, BorderLayout.WEST)
 
         # Create input component based on type
@@ -103,12 +111,16 @@ class SchemaFormGenerator:
             # Dropdown for enum values
             component = JComboBox(enum_values)
             component.setEditable(False)
+            if description:
+                component.setToolTipText(description)
         elif field_type == 'array':
             # Array field with add/remove buttons
             component = self._create_array_field(field_path, field_schema)
         elif field_type == 'number' or field_type == ['number', 'null']:
-            # Number input
+            # Number input with tooltip
             component = JTextField(10)
+            if description:
+                component.setToolTipText(description)
         elif field_type == 'string' or field_type == ['string']:
             # Text input
             if label == 'Notes':
@@ -116,16 +128,22 @@ class SchemaFormGenerator:
                 text_area = JTextArea(4, 30)
                 text_area.setLineWrap(True)
                 text_area.setWrapStyleWord(True)
+                if description:
+                    text_area.setToolTipText(description)
                 component = JScrollPane(text_area)
                 self.components[field_path] = text_area  # Store text area, not scroll pane
             else:
                 component = JTextField(30)
+                if description:
+                    component.setToolTipText(description)
         elif field_type == 'object':
             # Nested object - create sub-panel
             component = self._create_nested_object_field(field_path, field_schema)
         else:
             # Default to text field
             component = JTextField(30)
+            if description:
+                component.setToolTipText(description)
 
         if component and field_path not in self.components:
             self.components[field_path] = component
@@ -202,16 +220,26 @@ class SchemaFormGenerator:
         for prop_name, prop_schema in item_properties.items():
             prop_type = prop_schema.get('type')
             enum_values = prop_schema.get('enum')
+            description = prop_schema.get('description', '')
 
             field_panel = JPanel(FlowLayout(FlowLayout.LEFT))
-            field_panel.add(JLabel("%s:" % prop_name))
+            label = JLabel("%s:" % prop_name)
+            if description:
+                label.setToolTipText(description)
+            field_panel.add(label)
 
             if enum_values:
                 component = JComboBox(enum_values)
+                if description:
+                    component.setToolTipText(description)
             elif prop_type == 'number':
                 component = JTextField(10)
+                if description:
+                    component.setToolTipText(description)
             else:
                 component = JTextField(15)
+                if description:
+                    component.setToolTipText(description)
 
             item_components[prop_name] = component
             field_panel.add(component)
@@ -313,21 +341,31 @@ class SchemaFormGenerator:
                 for prop_name, prop_schema in item_properties.items():
                     prop_type = prop_schema.get('type')
                     enum_values = prop_schema.get('enum')
+                    description = prop_schema.get('description', '')
 
                     field_panel = JPanel(FlowLayout(FlowLayout.LEFT))
-                    field_panel.add(JLabel("%s:" % prop_name))
+                    label = JLabel("%s:" % prop_name)
+                    if description:
+                        label.setToolTipText(description)
+                    field_panel.add(label)
 
                     if enum_values:
                         component = JComboBox(enum_values)
+                        if description:
+                            component.setToolTipText(description)
                         # Set selected value if exists
                         if prop_name in value:
                             component.setSelectedItem(value[prop_name])
                     elif prop_type == 'number':
                         component = JTextField(10)
+                        if description:
+                            component.setToolTipText(description)
                         if prop_name in value:
                             component.setText(str(value[prop_name]))
                     else:
                         component = JTextField(15)
+                        if description:
+                            component.setToolTipText(description)
                         if prop_name in value:
                             component.setText(str(value[prop_name]))
 
