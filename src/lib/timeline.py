@@ -11,7 +11,7 @@ from datetime import datetime
 class TimelineEntry:
     """Represents an entry in the timeline (sample or experiment)"""
 
-    def __init__(self, entry_type, timestamp, name, details='', holder=None):
+    def __init__(self, entry_type, timestamp, name, details='', holder=None, parmod=None):
         """
         Args:
             entry_type: 'sample_created', 'sample_ejected', 'experiment'
@@ -19,12 +19,14 @@ class TimelineEntry:
             name: Display name
             details: Additional information
             holder: Sample holder position (for experiments)
+            parmod: PARMOD value (dimensions - 1) for experiments
         """
         self.entry_type = entry_type
         self.timestamp = timestamp
         self.name = name
         self.details = details
         self.holder = holder  # Sample holder position
+        self.parmod = parmod  # PARMOD value (dimensions = parmod + 1)
         self.filepath = None  # For experiments: full path to expno directory
 
     def get_sort_key(self):
@@ -161,10 +163,10 @@ class TimelineBuilder:
                                 mtime = os.path.getmtime(acqus_path)
                                 dt = datetime.fromtimestamp(mtime)
 
-                            # Try to get experiment details and holder from acqus
-                            exp_details, holder = self._parse_acqus_info(acqus_path)
+                            # Try to get experiment details, holder, and parmod from acqus
+                            exp_details, holder, parmod = self._parse_acqus_info(acqus_path)
 
-                            entry = TimelineEntry('experiment', dt, str(expno), exp_details, holder)
+                            entry = TimelineEntry('experiment', dt, str(expno), exp_details, holder, parmod)
                             entry.filepath = item_path
                             entries.append(entry)
 
@@ -218,7 +220,7 @@ class TimelineBuilder:
     def _parse_acqus_info(acqus_path):
         """
         Parse acqus file to extract useful information
-        Returns (summary_string, holder_position)
+        Returns (summary_string, holder_position, parmod)
         """
         try:
             with open(acqus_path, 'r') as f:
@@ -253,6 +255,14 @@ class TimelineBuilder:
                     except ValueError:
                         pass
 
+                # PARMOD (dimensions - 1)
+                elif line.startswith('##$PARMODE='):
+                    value = line.split('=')[1].strip()
+                    try:
+                        info['parmod'] = int(value)
+                    except ValueError:
+                        pass
+
             # Build summary
             parts = []
             if 'pulprog' in info:
@@ -264,8 +274,9 @@ class TimelineBuilder:
 
             summary = ", ".join(parts) if parts else "NMR experiment"
             holder = info.get('holder', None)
+            parmod = info.get('parmod', None)
 
-            return summary, holder
+            return summary, holder, parmod
 
         except Exception:
-            return "NMR experiment", None
+            return "NMR experiment", None, None

@@ -1304,7 +1304,8 @@ if curdata:
                     'details': details,
                     'entry': entry,
                     'sample_filepath': current_sample_filepath,  # For highlighting
-                    'color_index': current_sample_color_index  # For consistent coloring
+                    'color_index': current_sample_color_index,  # For consistent coloring
+                    'parmod': entry.parmod if entry.entry_type == 'experiment' else None  # For dimensionality coloring
                 })
 
             self.timeline_table_model.set_rows(rows, show_holder)
@@ -1549,25 +1550,29 @@ class TimelineTableCellRenderer(DefaultTableCellRenderer):
                     component.setBackground(self.color_grey)
 
         # Color pulse programs by dimensionality in Details column
+        # Use PARMOD from row data: dimensions = parmod + 1
         # Details is column 2 when holder is hidden, column 3 when holder is shown
         model = table.getModel()
         details_column = 3 if model.show_holder else 2
 
         if column == details_column and value and not isSelected:
-            pulprog = str(value).strip()
+            # Get parmod from row data to determine dimensionality
+            parmod = row_data.get('parmod') if row_data else None
 
-            # Determine dimensionality and color
-            if pulprog:
-                # 3D+ experiments (green)
-                if any(x in pulprog.lower() for x in ['3d', 'hncacb', 'hnco', 'hnca', 'hncaco', 'cbcaconh']):
-                    component.setForeground(Color(0, 128, 0))  # Green
-                # 2D experiments (blue)
-                elif any(x in pulprog.lower() for x in ['2d', 'hsqc', 'hmqc', 'hmbc', 'cosy', 'tocsy', 'noesy', 'roesy']):
-                    component.setForeground(Color(0, 0, 200))  # Blue
-                # 1D experiments (black) - default
+            if parmod is not None:
+                dimensions = parmod + 1
+                # Color by dimensionality
+                if dimensions >= 3:
+                    # 3D+ experiments (green)
+                    component.setForeground(Color(0, 128, 0))
+                elif dimensions == 2:
+                    # 2D experiments (blue)
+                    component.setForeground(Color(0, 0, 200))
                 else:
+                    # 1D experiments (black)
                     component.setForeground(Color.BLACK)
             else:
+                # No parmod data - default to black
                 component.setForeground(Color.BLACK)
         elif not isSelected:
             component.setForeground(Color.BLACK)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Auto-Inject Command (aij)
+Inject-and-Annotate Command (ija)
 Automatically inject a new sample - creates metadata and performs physical injection
 """
 
