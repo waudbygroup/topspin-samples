@@ -1,35 +1,88 @@
-# NMR Sample Manager
+# NMR Sample Manager for TopSpin
 
-A standalone web application for managing NMR sample metadata in TopSpin environments.
+A lightweight sample metadata management system for Bruker TopSpin, built with Jython and Java Swing.
 
-NMR workflows focus on data acquisition and processing, but sample tracking has been a longstanding blind spot. Bruker software manages *experiments* effectively, but provides no systematic way to record or retrieve information about *samples* -- e.g. protein concentrations, buffer compositions, isotopic labelling schemes, chemical shift referencing, NMR tube types. This often causes problems when looking back over old data or preparing data for repository submission.
+## Overview
 
-Here we describe a simple JSON schema for recording sample metadata, creating a lightweight, parallel system that captures sample information alongside TopSpin workflows.
+NMR workflows focus on data acquisition and processing, but sample tracking has been a longstanding blind spot. Bruker TopSpin manages *experiments* effectively, but provides no systematic way to record or retrieve information about *samples* -- e.g. protein concentrations, buffer compositions, isotopic labelling schemes, chemical shift referencing, NMR tube types. This often causes problems when looking back over old data or preparing data for repository submission.
 
-## Quick Start
-
-1. **Open Application**: Navigate to `src/index.html` in Chrome or Edge
-2. **Set Root Directory**: Click "Set" next to "Root:" and select your NMR data folder
-3. **Browse Experiments**: Click "Browse" to navigate to specific experiment folders
-4. **Manage Samples**: Use "New Sample", "Duplicate", "Edit", or "Eject" buttons
-5. **View Timeline**: Click "Show timeline" to see complete history of experiments and samples
+This tool provides a simple JSON schema for recording sample metadata, creating a lightweight, parallel system that captures sample information alongside TopSpin workflows.
 
 ## Features
 
-- **Privacy**: No data leaves your computer
-- **Zero Installation**: Works immediately on any Chrome/Edge laboratory computer
-- **Timeline Visualization**: Track sample/experiment history
-- **JSON Schema**: Structured, validated metadata collection
+- **TopSpin Integration**: Runs natively within TopSpin's Jython environment
+- **GUI Interface**: Java Swing-based interface with form-based metadata entry
+- **Timeline View**: Chronological visualization of samples and experiments
+- **Schema Validation**: JSON Schema-based validation ensures data consistency
+- **Version Control**: Schema versioning with migration support
+- **Auto-Navigation**: Automatically opens current dataset directory
+- **Sample Lifecycle**: Track sample creation, modification, and ejection timestamps
 
-## Browser Requirements
+## Installation
 
-- Chrome, Chromium, Edge (File System Access API support)
+1. Clone this repository to your TopSpin Python user directory:
+   ```bash
+   cd /path/to/topspin/exp/stan/nmr/py/user/
+   git clone https://github.com/your-org/sample-manager.git
+   ```
 
-Other browsers not currently tested/supported.
+2. The application will be available as TopSpin Python commands.
+
+## Usage
+
+### Main Commands
+
+- **`samples`** - Launch the main sample manager GUI
+  - Opens GUI and navigates to current dataset
+  - If already open, brings window to front and updates directory
+
+- **`ija`** - Inject-and-Annotate (create new sample with auto-eject of previous)
+  - Creates new sample entry with current timestamp
+  - Automatically ejects any previously active sample
+
+- **`eja`** - Eject-and-Annotate (mark current sample as ejected)
+  - Adds ejection timestamp to active sample
+  - Placeholder for physical ejection integration
+
+### GUI Features
+
+#### Directory Navigation
+- **Browse...** - Select any NMR data directory
+- **Go to current dataset** - Navigate to TopSpin's current dataset
+
+#### Sample Management
+- **New...** - Create new sample (auto-ejects previous active sample)
+- **Duplicate...** - Copy existing sample as template
+- **Edit** - Modify sample metadata (read-only view by default, edit on double-click)
+- **Eject** - Mark active sample as ejected (only enabled for active samples)
+- **Delete** - Remove ejected samples (disabled for active samples)
+
+#### Status Badge
+- **ACTIVE** (green) - Shows currently loaded sample
+- **EMPTY** (grey) - No active sample
+- **DRAFT** (amber) - Unsaved new/duplicated sample
+
+#### Timeline View
+- Chronological display of samples and experiments
+- Experiment entries parsed from acqus files
+- Color coding by dimensionality (PARMODE):
+  - Green: 3D+ experiments
+  - Blue: 2D experiments
+  - Black: 1D experiments
+- Conditional holder column (shown when rack positions differ)
+- Double-click experiments to open in TopSpin
 
 ## Data Model
 
-Sample metadata is stored as human-readable JSON files with schema validation:
+### File Naming Convention
+```
+YYYY-MM-DD_HHMMSS_samplename.json
+2025-10-09_143022_MyProtein.json
+```
+
+### Schema Structure
+
+Sample metadata is stored as human-readable JSON files:
 
 ```json
 {
@@ -39,17 +92,114 @@ Sample metadata is stored as human-readable JSON files with schema validation:
     "Components": [{
       "Name": "MyProtein",
       "Isotopic labelling": "15N",
-      "Concentration": 500, "unit": "uM"
+      "Concentration": 500,
+      "Unit": "uM"
     }]
   },
   "Buffer": {
-    "Components": [{"name": "Tris-HCl", "concentration": 50, "unit": "mM"}],
+    "Components": [{"name": "Tris-HCl", "Concentration": 50, "Unit": "mM"}],
     "pH": 7.4,
+    "Chemical shift reference": "DSS",
     "Solvent": "10% D2O"
   },
-  "NMR Tube": {"Diameter": "5mm", "Type": "shigemi"},
-  "Sample Position": {"Rack Position": "A3", "Rack ID": "Rack-001"},
-  "Laboratory Reference": {"Labbook Entry": "LB2025-08-001"},
-  "Notes": "Sample prepared for HSQC experiments"
+  "NMR Tube": {
+    "Diameter": "5 mm",
+    "Type": "shigemi",
+    "Sample Volume (μL)": 350,
+    "SampleJet Rack Position": "A3",
+    "SampleJet Rack ID": "Rack-001"
+  },
+  "Laboratory Reference": {
+    "Labbook Entry": "LB2025-08-001",
+    "Experiment ID": "EXP-042"
+  },
+  "Notes": "Sample prepared for HSQC experiments",
+  "Metadata": {
+    "schema_version": "0.0.2",
+    "created_timestamp": "2025-10-09T14:30:22.000Z",
+    "modified_timestamp": "2025-10-09T14:35:10.000Z",
+    "ejected_timestamp": "2025-10-09T16:45:00.000Z"
+  }
 }
 ```
+
+### Schema Versioning
+
+- Current version: **0.0.2**
+- Schemas stored in `src/schemas/`
+- `current.json` symlink points to active schema
+- Old samples automatically load with their original schema version
+- New/duplicated samples use current schema version
+
+## Technical Details
+
+### Architecture
+
+- **Platform**: Jython 2.7.2 + Java 11
+- **GUI Framework**: Java Swing
+- **Persistence**: Java System Properties (singleton pattern)
+- **Data Format**: JSON with JSON Schema validation
+- **TopSpin Integration**: EXEC_PYSCRIPT for command thread execution
+
+### Key Components
+
+- `samples.py` - Main GUI application
+- `ija.py` - Inject-and-Annotate command
+- `eja.py` - Eject-and-Annotate command
+- `lib/schema_form.py` - Dynamic form generation from JSON Schema
+- `lib/sample_io.py` - JSON file I/O with timestamping
+- `lib/timeline.py` - Timeline construction from samples and acqus files
+
+### Singleton Pattern
+
+The application uses Java System Properties to maintain a single persistent instance across script executions within the same TopSpin session. This allows:
+- State preservation between command invocations
+- External script control of running GUI
+- Window hide/show without data loss
+
+## Development
+
+### Project Structure
+
+```
+sample-manager/
+├── src/
+│   ├── samples.py           # Main GUI application
+│   ├── ija.py               # Inject command
+│   ├── eja.py               # Eject command
+│   ├── lib/
+│   │   ├── schema_form.py   # Form generation
+│   │   ├── sample_io.py     # File I/O
+│   │   └── timeline.py      # Timeline logic
+│   └── schemas/
+│       ├── current.json     # Symlink to active schema
+│       ├── v0.0.1.json
+│       └── v0.0.2.json
+├── CLAUDE.md                # Development documentation
+├── README.md                # This file
+└── CONTRIBUTORS.md
+```
+
+### Requirements
+
+- Bruker TopSpin with Jython 2.7.2
+- Java 11 or later
+- Pure Python libraries only (no C extensions)
+
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTORS.md](CONTRIBUTORS.md) for details.
+
+## License
+
+[To be determined]
+
+## Citation
+
+If you use this tool in your research, please cite:
+
+[Citation information to be added]
+
+## Acknowledgments
+
+See [CONTRIBUTORS.md](CONTRIBUTORS.md) for a full list of contributors.
