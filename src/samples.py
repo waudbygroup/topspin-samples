@@ -30,7 +30,7 @@ from sample_io import SampleIO
 from schema_form import SchemaFormGenerator
 from timeline import TimelineBuilder
 
-APP_KEY = "topspin.nmr.sample.manager"
+APP_KEY = "org.waudbylab.topspin-sample-manager"
 
 
 class SampleManagerApp:
@@ -450,7 +450,7 @@ if curdata:
     full_path = os.path.join(directory, name)
     # Get the app and set directory
     from java.lang import System
-    app = System.getProperties().get("topspin.nmr.sample.manager")
+    app = System.getProperties().get("org.waudbylab.topspin-sample-manager")
     if app:
         app.set_directory(full_path)
 ''')
@@ -1703,8 +1703,9 @@ def get_app():
             app = SampleManagerApp()
             System.getProperties().put(APP_KEY, app)
         else:
-            # Show existing instance
+            # Show existing instance and navigate to current dataset
             app.show()
+            app._navigate_to_curdata()
 
     return app
 

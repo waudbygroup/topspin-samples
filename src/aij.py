@@ -6,7 +6,7 @@ Automatically inject a new sample - creates metadata and performs physical injec
 
 from java.lang import System
 
-APP_KEY = "topspin.nmr.sample.manager"
+APP_KEY = "org.waudbylab.topspin-sample-manager"
 
 
 def main():

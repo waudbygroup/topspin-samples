@@ -6,7 +6,7 @@ Automatically eject the active sample - adds timestamp and performs physical eje
 
 from java.lang import System
 
-APP_KEY = "topspin.nmr.sample.manager"
+APP_KEY = "org.waudbylab.topspin-sample-manager"
 
 
 def main():
