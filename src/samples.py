@@ -195,22 +195,23 @@ class SampleManagerApp:
 
         dir_container.add(Box.createVerticalStrut(3))
 
-        # Button row
-        button_row = JPanel(GridLayout(1, 2, 5, 0))
-        button_row.setAlignmentX(Component.LEFT_ALIGNMENT)
-
-        btn_current = JButton('Current Dataset')
-        btn_current.setToolTipText("Navigate to current TopSpin dataset")
-        btn_current.addActionListener(lambda e: self._navigate_to_curdata())
-
+        # Browse button (full width)
         btn_browse = JButton('Browse...')
         btn_browse.setToolTipText("Browse for directory")
         btn_browse.addActionListener(lambda e: self._browse_directory())
+        btn_browse.setAlignmentX(Component.LEFT_ALIGNMENT)
+        btn_browse.setMaximumSize(Dimension(32767, 28))
+        dir_container.add(btn_browse)
 
-        button_row.add(btn_current)
-        button_row.add(btn_browse)
+        dir_container.add(Box.createVerticalStrut(3))
 
-        dir_container.add(button_row)
+        # Current dataset button (full width)
+        btn_current = JButton('Go to current dataset')
+        btn_current.setToolTipText("Navigate to current TopSpin dataset")
+        btn_current.addActionListener(lambda e: self._navigate_to_curdata())
+        btn_current.setAlignmentX(Component.LEFT_ALIGNMENT)
+        btn_current.setMaximumSize(Dimension(32767, 28))
+        dir_container.add(btn_current)
 
         gbc.gridy = 0
         top_section.add(dir_container, gbc)
@@ -397,12 +398,6 @@ class SampleManagerApp:
         self.timeline_table.setGridColor(Color(230, 230, 230))
         self.timeline_table.setAutoCreateRowSorter(True)
 
-        # Configure columns
-        col_model = self.timeline_table.getColumnModel()
-        col_model.getColumn(0).setPreferredWidth(220)  # Date/Time
-        col_model.getColumn(1).setPreferredWidth(180)  # Sample/Experiment
-        col_model.getColumn(2).setPreferredWidth(250)  # Details
-
         # Custom renderer for highlighting
         self.timeline_table.setDefaultRenderer(Object, TimelineTableCellRenderer(self))
 
@@ -462,7 +457,17 @@ if curdata:
     def set_directory(self, directory, auto_select=True):
         """Set current directory and refresh sample list"""
         self.current_directory = directory
-        self.dir_label.setText(directory)
+
+        # Show only last two directory components for cleaner display
+        dir_parts = directory.split(os.sep)
+        if len(dir_parts) >= 2:
+            display_dir = os.sep.join(dir_parts[-2:])
+        else:
+            display_dir = directory
+
+        self.dir_label.setText(display_dir)
+        self.dir_label.setToolTipText(directory)  # Full path in tooltip
+
         self._refresh_sample_list()
         self._refresh_timeline()
         self._update_badge()
@@ -1198,6 +1203,16 @@ if curdata:
 
         try:
             entries = self.timeline_builder.build_timeline(self.current_directory)
+
+            # Check if we need a holder column (any non-zero holder values or multiple different holders)
+            holder_values = set()
+            for entry in entries:
+                if entry.entry_type == 'experiment' and entry.holder is not None:
+                    holder_values.add(entry.holder)
+
+            # Show holder column if we have multiple different values or any non-zero values
+            show_holder = len(holder_values) > 1 or (len(holder_values) == 1 and 0 not in holder_values)
+
             rows = []
             current_sample_filepath = None
             current_sample_color_index = 0  # Track color index for alternating
@@ -1248,16 +1263,33 @@ if curdata:
                 if details and ',' in details:
                     details = details.split(',')[0].strip()  # Just the pulse program
 
+                # Get holder value (only for experiments)
+                holder_str = ""
+                if entry.entry_type == 'experiment' and entry.holder is not None:
+                    holder_str = str(entry.holder)
+
                 rows.append({
                     'timestamp': timestamp_str,
                     'name': display_name,
+                    'holder': holder_str,
                     'details': details,
                     'entry': entry,
                     'sample_filepath': current_sample_filepath,  # For highlighting
                     'color_index': current_sample_color_index  # For consistent coloring
                 })
 
-            self.timeline_table_model.set_rows(rows)
+            self.timeline_table_model.set_rows(rows, show_holder)
+
+            # Configure column widths after structure changes
+            col_model = self.timeline_table.getColumnModel()
+            col_model.getColumn(0).setPreferredWidth(220)  # Date/Time
+            col_model.getColumn(1).setPreferredWidth(180)  # Sample/Experiment
+
+            if show_holder:
+                col_model.getColumn(2).setPreferredWidth(60)   # Holder
+                col_model.getColumn(3).setPreferredWidth(250)  # Details
+            else:
+                col_model.getColumn(2).setPreferredWidth(250)  # Details
 
         except Exception as e:
             self.update_status("Error refreshing timeline: %s" % str(e))
@@ -1401,6 +1433,7 @@ class TimelineTableModel(AbstractTableModel):
 
     def __init__(self):
         self.rows = []
+        self.show_holder = False
         self.column_names = ['Date/Time', 'Sample/Experiment', 'Details']
 
     def getColumnCount(self):
@@ -1421,6 +1454,11 @@ class TimelineTableModel(AbstractTableModel):
         elif col == 1:
             return row_data['name']
         elif col == 2:
+            if self.show_holder:
+                return row_data['holder']
+            else:
+                return row_data['details']
+        elif col == 3:
             return row_data['details']
         return None
 
@@ -1430,10 +1468,18 @@ class TimelineTableModel(AbstractTableModel):
             return self.rows[row]
         return None
 
-    def set_rows(self, rows):
-        """Replace all rows"""
+    def set_rows(self, rows, show_holder=False):
+        """Replace all rows and set column visibility"""
         self.rows = rows
-        self.fireTableDataChanged()
+        self.show_holder = show_holder
+
+        # Update column names based on whether holder is shown
+        if show_holder:
+            self.column_names = ['Date/Time', 'Sample/Experiment', 'Holder', 'Details']
+        else:
+            self.column_names = ['Date/Time', 'Sample/Experiment', 'Details']
+
+        self.fireTableStructureChanged()
 
     def clear_rows(self):
         """Clear all rows"""
@@ -1474,7 +1520,11 @@ class TimelineTableCellRenderer(DefaultTableCellRenderer):
                     component.setBackground(self.color_grey)
 
         # Color pulse programs by dimensionality in Details column
-        if column == 2 and value and not isSelected:
+        # Details is column 2 when holder is hidden, column 3 when holder is shown
+        model = table.getModel()
+        details_column = 3 if model.show_holder else 2
+
+        if column == details_column and value and not isSelected:
             pulprog = str(value).strip()
 
             # Determine dimensionality and color

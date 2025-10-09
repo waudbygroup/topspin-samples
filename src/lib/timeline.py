@@ -11,18 +11,20 @@ from datetime import datetime
 class TimelineEntry:
     """Represents an entry in the timeline (sample or experiment)"""
 
-    def __init__(self, entry_type, timestamp, name, details=''):
+    def __init__(self, entry_type, timestamp, name, details='', holder=None):
         """
         Args:
             entry_type: 'sample_created', 'sample_ejected', 'experiment'
             timestamp: datetime object
             name: Display name
             details: Additional information
+            holder: Sample holder position (for experiments)
         """
         self.entry_type = entry_type
         self.timestamp = timestamp
         self.name = name
         self.details = details
+        self.holder = holder  # Sample holder position
         self.filepath = None  # For experiments: full path to expno directory
 
     def get_sort_key(self):
@@ -159,10 +161,10 @@ class TimelineBuilder:
                                 mtime = os.path.getmtime(acqus_path)
                                 dt = datetime.fromtimestamp(mtime)
 
-                            # Try to get experiment details from acqus
-                            exp_details = self._parse_acqus_info(acqus_path)
+                            # Try to get experiment details and holder from acqus
+                            exp_details, holder = self._parse_acqus_info(acqus_path)
 
-                            entry = TimelineEntry('experiment', dt, str(expno), exp_details)
+                            entry = TimelineEntry('experiment', dt, str(expno), exp_details, holder)
                             entry.filepath = item_path
                             entries.append(entry)
 
@@ -216,7 +218,7 @@ class TimelineBuilder:
     def _parse_acqus_info(acqus_path):
         """
         Parse acqus file to extract useful information
-        Returns summary string
+        Returns (summary_string, holder_position)
         """
         try:
             with open(acqus_path, 'r') as f:
@@ -243,6 +245,14 @@ class TimelineBuilder:
                     value = line.split('=')[1].strip()
                     info['ns'] = value
 
+                # Holder position
+                elif line.startswith('##$HOLDER='):
+                    value = line.split('=')[1].strip()
+                    try:
+                        info['holder'] = int(value)
+                    except ValueError:
+                        pass
+
             # Build summary
             parts = []
             if 'pulprog' in info:
@@ -252,7 +262,10 @@ class TimelineBuilder:
             if 'ns' in info:
                 parts.append("%s scans" % info['ns'])
 
-            return ", ".join(parts) if parts else "NMR experiment"
+            summary = ", ".join(parts) if parts else "NMR experiment"
+            holder = info.get('holder', None)
+
+            return summary, holder
 
         except Exception:
-            return "NMR experiment"
+            return "NMR experiment", None
