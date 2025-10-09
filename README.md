@@ -2,6 +2,10 @@
 
 A lightweight sample metadata management system for Bruker TopSpin, built with Jython and Java Swing.
 
+![Screenshot - Sample editing](assets/screenshot.png)
+![Screenshot - Experimental timeline](assets/screenshot-timeline.png)
+
+
 ## Overview
 
 NMR workflows focus on data acquisition and processing, but sample tracking has been a longstanding blind spot. Bruker TopSpin manages *experiments* effectively, but provides no systematic way to record or retrieve information about *samples* -- e.g. protein concentrations, buffer compositions, isotopic labelling schemes, chemical shift referencing, NMR tube types. This often causes problems when looking back over old data or preparing data for repository submission.
@@ -196,11 +200,8 @@ sample-manager/
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTORS.md](CONTRIBUTORS.md) for details.
-
-## License
-
-[To be determined]
+Contributions are welcome! Get in touch with Chris!
+<!-- Please see [CONTRIBUTORS.md](CONTRIBUTORS.md) for details. -->
 
 ## Citation
 
@@ -208,6 +209,6 @@ If you use this tool in your research, please cite:
 
 [Citation information to be added]
 
-## Acknowledgments
+<!-- ## Acknowledgments
 
-See [CONTRIBUTORS.md](CONTRIBUTORS.md) for a full list of contributors.
+See [CONTRIBUTORS.md](CONTRIBUTORS.md) for a full list of contributors. -->
