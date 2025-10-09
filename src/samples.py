@@ -1213,8 +1213,12 @@ if curdata:
             # Show holder column if we have multiple different values or any non-zero values
             show_holder = len(holder_values) > 1 or (len(holder_values) == 1 and 0 not in holder_values)
 
+            # Check if we have any sample events
+            has_samples = any(entry.entry_type in ('sample_created', 'sample_ejected') for entry in entries)
+
             rows = []
             current_sample_filepath = None
+            current_holder = None
             current_sample_color_index = 0  # Track color index for alternating
 
             for entry in entries:
@@ -1243,7 +1247,7 @@ if curdata:
 
                 timestamp_str = "%s %d %s %d, %d.%02d %s" % (day_name, day, month, year, hour_12, minute, am_pm)
 
-                # Determine display name and track sample changes
+                # Determine display name and track sample/holder changes for coloring
                 if entry.entry_type == 'sample_created':
                     display_name = entry.name
                     # New sample - toggle color
@@ -1255,6 +1259,11 @@ if curdata:
                     # Keep current_sample_filepath and color for coloring
                 elif entry.entry_type == 'experiment':
                     display_name = "Exp %s" % entry.name
+                    # If no samples defined, use holder for color alternation
+                    if not has_samples and show_holder and entry.holder is not None:
+                        if current_holder != entry.holder:
+                            current_sample_color_index = 1 - current_sample_color_index
+                            current_holder = entry.holder
                 else:
                     display_name = entry.name
 
