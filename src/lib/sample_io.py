@@ -12,7 +12,7 @@ from datetime import datetime
 class SampleIO:
     """Handle reading/writing sample JSON files with proper timestamping"""
 
-    def __init__(self, schema_version="0.0.1"):
+    def __init__(self, schema_version="0.0.2"):
         self.schema_version = schema_version
 
     @staticmethod

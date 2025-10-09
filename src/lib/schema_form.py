@@ -271,9 +271,15 @@ class SchemaFormGenerator:
 
     def _create_array_field(self, field_path, field_schema):
         """Create array field with add/remove functionality"""
-        array_panel = JPanel()
-        array_panel.setLayout(BoxLayout(array_panel, BoxLayout.Y_AXIS))
+        array_panel = JPanel(GridBagLayout())
         array_panel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0))
+
+        gbc = GridBagConstraints()
+        gbc.gridx = 0
+        gbc.gridy = 0
+        gbc.weightx = 1.0
+        gbc.fill = GridBagConstraints.HORIZONTAL
+        gbc.anchor = GridBagConstraints.WEST
 
         items_schema = field_schema.get('items', {})
         item_type = items_schema.get('type')
@@ -282,15 +288,13 @@ class SchemaFormGenerator:
         if item_type == 'object':
             instruction = JLabel("Components:")
             instruction.setFont(instruction.getFont().deriveFont(Font.ITALIC, 10.0))
-            instruction.setAlignmentX(Component.LEFT_ALIGNMENT)
-            array_panel.add(instruction)
-            array_panel.add(Box.createVerticalStrut(5))
+            array_panel.add(instruction, gbc)
+            gbc.gridy += 1
         elif item_type == 'string':
             instruction = JLabel("Add items below:")
             instruction.setFont(instruction.getFont().deriveFont(Font.ITALIC, 10.0))
-            instruction.setAlignmentX(Component.LEFT_ALIGNMENT)
-            array_panel.add(instruction)
-            array_panel.add(Box.createVerticalStrut(5))
+            array_panel.add(instruction, gbc)
+            gbc.gridy += 1
 
         # List to hold array items
         items_list = []
@@ -306,6 +310,8 @@ class SchemaFormGenerator:
             if item_type == 'string':
                 # Simple string item
                 item_panel = JPanel(FlowLayout(FlowLayout.LEFT))
+                item_panel.setAlignmentX(Component.LEFT_ALIGNMENT)
+
                 text_field = JTextField(25)
                 text_field.getDocument().addDocumentListener(FormModificationListener(self))
                 item_panel.add(text_field)
@@ -332,14 +338,15 @@ class SchemaFormGenerator:
 
         # Add button in its own panel for better alignment
         button_panel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 5))
-        button_panel.setAlignmentX(Component.LEFT_ALIGNMENT)
         add_btn = JButton('+ Add')
         add_btn.setPreferredSize(Dimension(80, 26))
         add_btn.addActionListener(lambda e: add_item())
         button_panel.add(add_btn)
 
-        array_panel.add(items_container)
-        array_panel.add(button_panel)
+        # Add items container and button panel using GridBagLayout
+        array_panel.add(items_container, gbc)
+        gbc.gridy += 1
+        array_panel.add(button_panel, gbc)
 
         # Store reference
         self.components[field_path] = {'container': items_container, 'items': items_list, 'schema': items_schema}

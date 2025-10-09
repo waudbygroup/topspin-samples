@@ -294,12 +294,17 @@ class SampleManagerApp:
 
         # First row: New | Duplicate
         row1 = JPanel(GridLayout(1, 2, 5, 0))
-        self.btn_new = JButton('New')
-        self.btn_duplicate = JButton('Duplicate')
+        self.btn_new = JButton('New...')
+        self.btn_duplicate = JButton('Duplicate...')
         self.btn_new.setToolTipText("Create a new sample")
         self.btn_duplicate.setToolTipText("Duplicate the selected sample")
         self.btn_new.addActionListener(lambda e: self._new_sample())
         self.btn_duplicate.addActionListener(lambda e: self._duplicate_sample())
+        # Green background for both New and Duplicate (primary actions)
+        self.btn_new.setBackground(Color(200, 230, 200))
+        self.btn_new.setOpaque(True)
+        self.btn_duplicate.setBackground(Color(200, 230, 200))
+        self.btn_duplicate.setOpaque(True)
         row1.add(self.btn_new)
         row1.add(self.btn_duplicate)
 
@@ -308,6 +313,9 @@ class SampleManagerApp:
         self.btn_edit = JButton('Edit')
         self.btn_edit.setToolTipText("Edit the selected sample")
         self.btn_edit.addActionListener(lambda e: self._edit_sample())
+        # Light blue background for Edit
+        self.btn_edit.setBackground(Color(220, 235, 255))
+        self.btn_edit.setOpaque(True)
         row2.add(self.btn_edit)
 
         # Third row: Eject
@@ -315,6 +323,9 @@ class SampleManagerApp:
         self.btn_eject = JButton('Eject')
         self.btn_eject.setToolTipText("Mark active sample as ejected")
         self.btn_eject.addActionListener(lambda e: self._eject_active_sample())
+        # Yellow/amber background for Eject (warning)
+        self.btn_eject.setBackground(Color(255, 235, 180))
+        self.btn_eject.setOpaque(True)
         row3.add(self.btn_eject)
 
         # Fourth row: Delete
@@ -322,6 +333,9 @@ class SampleManagerApp:
         self.btn_delete = JButton('Delete')
         self.btn_delete.setToolTipText("Delete the selected sample (must be ejected)")
         self.btn_delete.addActionListener(lambda e: self._delete_sample())
+        # Light red background for Delete (destructive)
+        self.btn_delete.setBackground(Color(255, 220, 220))
+        self.btn_delete.setOpaque(True)
         row4.add(self.btn_delete)
 
         panel.add(row1)
@@ -374,8 +388,10 @@ class SampleManagerApp:
         self.btn_cancel.setToolTipText("Cancel editing and clear form")
         self.btn_save.setToolTipText("Save sample to file")
 
-        # Make Save button visually primary
+        # Make Save button visually primary with color
         self.btn_save.setFont(self.btn_save.getFont().deriveFont(Font.BOLD))
+        self.btn_save.setBackground(Color(200, 230, 200))  # Green
+        self.btn_save.setOpaque(True)
 
         button_row.add(self.btn_cancel)
         button_row.add(self.btn_save)
@@ -747,6 +763,10 @@ if curdata:
         # Enable/disable buttons based on sample status
         self.btn_duplicate.setEnabled(True)
         self.btn_edit.setEnabled(True)
+
+        # Eject button - only enabled when THIS selected sample is the active sample
+        # Active sample = status is 'loaded' (has no ejected_timestamp)
+        self.btn_eject.setEnabled(status == 'loaded')
 
         # Delete only enabled for ejected samples (not active)
         self.btn_delete.setEnabled(status == 'ejected')
