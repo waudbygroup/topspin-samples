@@ -13,6 +13,7 @@ from java.lang import System
 import java.awt.event
 import sys
 import os
+from datetime import datetime
 
 # Add lib directory to path - use script directory fallback since __file__ may not be defined in Jython
 try:
@@ -52,6 +53,8 @@ class SampleManagerApp:
         self.current_sample_file = None
         self.timeline_builder = TimelineBuilder(self.sample_io)
         self.form_modified = False  # Track if form has been edited
+        self.is_draft = False  # Track if current form is an unsaved draft
+        self.draft_data = None  # Store draft data for unsaved samples
 
         # GUI components
         self.frame = None
@@ -62,6 +65,8 @@ class SampleManagerApp:
         self.btn_new = None
         self.btn_duplicate = None
         self.btn_edit = None
+        self.btn_eject = None
+        self.btn_delete = None
         self.btn_save = None
         self.btn_cancel = None
         self.form_panel = None
@@ -69,6 +74,8 @@ class SampleManagerApp:
         self.timeline_table_model = None
         self.tabbed_pane = None
         self.selected_sample_filepath = None
+        self.badge_label = None
+        self.badge_detail_label = None
 
         # Initialize
         self._create_gui()
@@ -79,15 +86,20 @@ class SampleManagerApp:
         """Set initial button enabled/disabled states"""
         self.btn_duplicate.setEnabled(False)
         self.btn_edit.setEnabled(False)
+        self.btn_eject.setEnabled(False)
+        self.btn_delete.setEnabled(False)
         self.btn_save.setEnabled(False)
         self.btn_cancel.setEnabled(False)
 
     def mark_form_modified(self):
         """Mark form as modified and enable Save/Cancel buttons"""
-        if not self.form_modified:
-            self.form_modified = True
-            self.btn_save.setEnabled(True)
-            self.btn_cancel.setEnabled(True)
+        self.form_modified = True
+        self.btn_save.setEnabled(True)
+        self.btn_cancel.setEnabled(True)
+        # Update draft data for badge display
+        if self.is_draft and self.form_generator:
+            self.draft_data = self.form_generator.get_data()
+            self._update_badge()
 
     def _get_git_version(self):
         """Get git commit hash for version display"""
@@ -153,80 +165,61 @@ class SampleManagerApp:
         return None
 
     def _create_sample_list_panel(self):
-        """Create left panel with directory browser, action buttons, and sample list"""
+        """Create left panel with directory browser, badge, sample list, and action buttons"""
         panel = JPanel(BorderLayout())
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10))
 
-        # Top section container
-        top_section = JPanel()
-        top_section.setLayout(BoxLayout(top_section, BoxLayout.Y_AXIS))
+        # Top section container - use GridBagLayout for precise control
+        top_section = JPanel(GridBagLayout())
+        gbc = GridBagConstraints()
+        gbc.gridx = 0
+        gbc.fill = GridBagConstraints.HORIZONTAL
+        gbc.weightx = 1.0
+        gbc.insets = Insets(0, 0, 0, 0)
 
-        # Directory browser section
-        dir_panel = JPanel()
-        dir_panel.setLayout(BoxLayout(dir_panel, BoxLayout.Y_AXIS))
-        dir_panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0))
+        # Directory browser - path field on first line, buttons on second line
+        dir_container = JPanel()
+        dir_container.setLayout(BoxLayout(dir_container, BoxLayout.Y_AXIS))
 
-        # Directory label
-        dir_label_text = JLabel("Current Directory:")
-        dir_label_text.setFont(dir_label_text.getFont().deriveFont(Font.BOLD, 11.0))
-        dir_label_text.setAlignmentX(Component.LEFT_ALIGNMENT)
-        dir_panel.add(dir_label_text)
-
-        dir_panel.add(Box.createVerticalStrut(3))
-
-        # Directory path (full width)
+        # Directory path field
         self.dir_label = JTextField("None")
         self.dir_label.setEditable(False)
         self.dir_label.setBackground(Color.WHITE)
+        self.dir_label.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color(180, 180, 180), 1),
+            BorderFactory.createEmptyBorder(3, 5, 3, 5)
+        ))
         self.dir_label.setMaximumSize(Dimension(32767, 28))
         self.dir_label.setAlignmentX(Component.LEFT_ALIGNMENT)
-        dir_panel.add(self.dir_label)
+        dir_container.add(self.dir_label)
 
-        dir_panel.add(Box.createVerticalStrut(3))
+        dir_container.add(Box.createVerticalStrut(3))
 
-        # Browse button on separate line
-        browse_panel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0))
-        browse_panel.setAlignmentX(Component.LEFT_ALIGNMENT)
+        # Button row
+        button_row = JPanel(GridLayout(1, 2, 5, 0))
+        button_row.setAlignmentX(Component.LEFT_ALIGNMENT)
+
+        btn_current = JButton('Current Dataset')
+        btn_current.setToolTipText("Navigate to current TopSpin dataset")
+        btn_current.addActionListener(lambda e: self._navigate_to_curdata())
+
         btn_browse = JButton('Browse...')
-        btn_browse.setPreferredSize(Dimension(100, 28))
+        btn_browse.setToolTipText("Browse for directory")
         btn_browse.addActionListener(lambda e: self._browse_directory())
-        browse_panel.add(btn_browse)
-        dir_panel.add(browse_panel)
 
-        top_section.add(dir_panel)
+        button_row.add(btn_current)
+        button_row.add(btn_browse)
 
-        # Action buttons section
-        button_panel = JPanel(FlowLayout(FlowLayout.LEFT, 5, 5))
-        button_panel.setAlignmentX(Component.LEFT_ALIGNMENT)
-        button_panel.setBorder(BorderFactory.createEmptyBorder(5, 0, 10, 0))
+        dir_container.add(button_row)
 
-        # Store button references for enabling/disabling
-        self.btn_new = JButton('New Sample')
-        self.btn_duplicate = JButton('Duplicate')
-        self.btn_edit = JButton('Edit')
+        gbc.gridy = 0
+        top_section.add(dir_container, gbc)
 
-        self.btn_new.setPreferredSize(Dimension(110, 28))
-        self.btn_duplicate.setPreferredSize(Dimension(110, 28))
-        self.btn_edit.setPreferredSize(Dimension(110, 28))
-
-        self.btn_new.addActionListener(lambda e: self._new_sample())
-        self.btn_duplicate.addActionListener(lambda e: self._duplicate_sample())
-        self.btn_edit.addActionListener(lambda e: self._edit_sample())
-
-        self.btn_new.setToolTipText("Create a new sample (auto-ejects active sample)")
-        self.btn_duplicate.setToolTipText("Duplicate the selected sample")
-        self.btn_edit.setToolTipText("Edit the selected sample")
-
-        button_panel.add(self.btn_new)
-        button_panel.add(self.btn_duplicate)
-        button_panel.add(self.btn_edit)
-
-        top_section.add(button_panel)
-
-        # Set preferred and maximum height to ensure buttons are always visible
-        top_section.setPreferredSize(Dimension(250, 145))
-        top_section.setMinimumSize(Dimension(200, 145))
-        top_section.setMaximumSize(Dimension(32767, 145))
+        # Badge section - shows current sample status
+        badge_panel = self._create_badge_panel()
+        gbc.gridy = 1
+        gbc.insets = Insets(10, 0, 10, 0)
+        top_section.add(badge_panel, gbc)
 
         panel.add(top_section, BorderLayout.NORTH)
 
@@ -251,11 +244,92 @@ class SampleManagerApp:
         self.sample_table.getSelectionModel().addListSelectionListener(
             lambda e: self._on_sample_selected() if not e.getValueIsAdjusting() else None)
 
-        # Context menu
+        # Mouse listener for context menu and double-click
         self.sample_table.addMouseListener(SampleTableMouseListener(self))
 
         scroll_pane = JScrollPane(self.sample_table)
         panel.add(scroll_pane, BorderLayout.CENTER)
+
+        # Bottom section - action buttons
+        button_panel = self._create_action_buttons()
+        panel.add(button_panel, BorderLayout.SOUTH)
+
+        return panel
+
+    def _create_badge_panel(self):
+        """Create badge showing current sample status"""
+        badge_container = JPanel()
+        badge_container.setLayout(BoxLayout(badge_container, BoxLayout.Y_AXIS))
+
+        # Main badge - pill-shaped with colored background
+        self.badge_label = JLabel("EMPTY", JLabel.CENTER)
+        self.badge_label.setFont(self.badge_label.getFont().deriveFont(Font.BOLD, 12.0))
+        self.badge_label.setOpaque(True)
+        self.badge_label.setBackground(Color(180, 180, 180))  # Grey for empty
+        self.badge_label.setForeground(Color.WHITE)
+        self.badge_label.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color(140, 140, 140), 2, True),  # Rounded border
+            BorderFactory.createEmptyBorder(8, 15, 8, 15)
+        ))
+        self.badge_label.setAlignmentX(Component.CENTER_ALIGNMENT)
+
+        # Detail label - shows timestamp or other info
+        self.badge_detail_label = JLabel("No active sample", JLabel.CENTER)
+        self.badge_detail_label.setFont(self.badge_detail_label.getFont().deriveFont(Font.PLAIN, 10.0))
+        self.badge_detail_label.setForeground(Color(100, 100, 100))
+        self.badge_detail_label.setAlignmentX(Component.CENTER_ALIGNMENT)
+
+        badge_container.add(self.badge_label)
+        badge_container.add(Box.createVerticalStrut(5))
+        badge_container.add(self.badge_detail_label)
+
+        return badge_container
+
+    def _create_action_buttons(self):
+        """Create action button panel at bottom of sample list"""
+        panel = JPanel()
+        panel.setLayout(BoxLayout(panel, BoxLayout.Y_AXIS))
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0))
+
+        # First row: New | Duplicate
+        row1 = JPanel(GridLayout(1, 2, 5, 0))
+        self.btn_new = JButton('New')
+        self.btn_duplicate = JButton('Duplicate')
+        self.btn_new.setToolTipText("Create a new sample")
+        self.btn_duplicate.setToolTipText("Duplicate the selected sample")
+        self.btn_new.addActionListener(lambda e: self._new_sample())
+        self.btn_duplicate.addActionListener(lambda e: self._duplicate_sample())
+        row1.add(self.btn_new)
+        row1.add(self.btn_duplicate)
+
+        # Second row: Edit
+        row2 = JPanel(GridLayout(1, 1, 0, 0))
+        self.btn_edit = JButton('Edit')
+        self.btn_edit.setToolTipText("Edit the selected sample")
+        self.btn_edit.addActionListener(lambda e: self._edit_sample())
+        row2.add(self.btn_edit)
+
+        # Third row: Eject
+        row3 = JPanel(GridLayout(1, 1, 0, 0))
+        self.btn_eject = JButton('Eject')
+        self.btn_eject.setToolTipText("Mark active sample as ejected")
+        self.btn_eject.addActionListener(lambda e: self._eject_active_sample())
+        row3.add(self.btn_eject)
+
+        # Fourth row: Delete
+        row4 = JPanel(GridLayout(1, 1, 0, 0))
+        self.btn_delete = JButton('Delete')
+        self.btn_delete.setToolTipText("Delete the selected sample (must be ejected)")
+        self.btn_delete.addActionListener(lambda e: self._delete_sample())
+        row4.add(self.btn_delete)
+
+        panel.add(row1)
+        panel.add(Box.createVerticalStrut(5))
+        panel.add(row2)
+        panel.add(Box.createVerticalStrut(5))
+        panel.add(row3)
+        panel.add(Box.createVerticalStrut(5))
+        panel.add(row4)
 
         return panel
 
@@ -353,14 +427,22 @@ class SampleManagerApp:
     def _navigate_to_curdata(self):
         """Navigate to current TopSpin dataset directory"""
         try:
-            curdata = CURDATA()
-            if curdata:
-                # CURDATA returns [name, expno, procno, directory]
-                # Full path is directory/name
-                name = curdata[0]
-                directory = curdata[3]
-                full_path = os.path.join(directory, name)
-                self.set_directory(full_path)
+            # CURDATA must be run in a command thread via EXEC_PYSCRIPT
+            # We navigate to the parent directory (not the expno subdirectory)
+            EXEC_PYSCRIPT('''
+import os
+curdata = CURDATA()
+if curdata:
+    name = curdata[0]
+    directory = curdata[3]
+    # Navigate to the dataset directory (parent of expno folders)
+    full_path = os.path.join(directory, name)
+    # Get the app and set directory
+    from java.lang import System
+    app = System.getProperties().get("topspin.nmr.sample.manager")
+    if app:
+        app.set_directory(full_path)
+''')
         except Exception as e:
             self.update_status("Could not navigate to CURDATA: %s" % str(e))
 
@@ -377,18 +459,189 @@ class SampleManagerApp:
             selected_dir = chooser.getSelectedFile().getAbsolutePath()
             self.set_directory(selected_dir)
 
-    def set_directory(self, directory):
+    def set_directory(self, directory, auto_select=True):
         """Set current directory and refresh sample list"""
         self.current_directory = directory
         self.dir_label.setText(directory)
         self._refresh_sample_list()
         self._refresh_timeline()
+        self._update_badge()
+
+        # Auto-select appropriate sample if requested
+        if auto_select:
+            self._auto_select_sample_for_directory()
+
         self.update_status("Directory: %s" % directory)
+
+    def _auto_select_sample_for_directory(self):
+        """Auto-select the sample associated with current experiment via timeline"""
+        if not self.current_directory:
+            return
+
+        try:
+            # Get current experiment number from directory path
+            # Directory structure: /path/to/data/experimentName/expno
+            expno = None
+            try:
+                # Extract experiment number from directory name
+                dir_parts = self.current_directory.split(os.sep)
+                expno_str = dir_parts[-1]  # Last part should be expno
+                expno = int(expno_str)
+            except (ValueError, IndexError):
+                # Not a valid experiment directory
+                return
+
+            # Build timeline to find which sample was active during this experiment
+            entries = self.timeline_builder.build_timeline(self.current_directory)
+
+            # Find the sample that was active when this experiment was run
+            # Timeline is sorted chronologically, so we look for:
+            # 1. The most recent sample_created BEFORE this experiment number
+            # 2. Make sure it wasn't ejected before this experiment
+
+            best_sample_filepath = None
+            current_sample_filepath = None
+
+            for entry in entries:
+                if entry.entry_type == 'sample_created':
+                    # New sample became active
+                    current_sample_filepath = entry.filepath
+                elif entry.entry_type == 'sample_ejected':
+                    # Sample was ejected, no longer active
+                    current_sample_filepath = None
+                elif entry.entry_type == 'experiment':
+                    # Check if this is our target experiment
+                    try:
+                        entry_expno = int(entry.name)
+                        if entry_expno == expno:
+                            # This is the experiment we want
+                            # The current_sample_filepath is the sample that was active
+                            best_sample_filepath = current_sample_filepath
+                            break
+                    except (ValueError, AttributeError):
+                        continue
+
+            # Find this sample in the table and select it
+            if best_sample_filepath:
+                sample_files = self.sample_io.list_sample_files(self.current_directory)
+                for idx, filename in enumerate(sample_files):
+                    filepath = os.path.join(self.current_directory, filename)
+                    if filepath == best_sample_filepath:
+                        self.sample_table.setRowSelectionInterval(idx, idx)
+                        # Scroll to make it visible
+                        self.sample_table.scrollRectToVisible(
+                            self.sample_table.getCellRect(idx, 0, True)
+                        )
+                        break
+
+        except Exception as e:
+            # Silently fail - auto-selection is a convenience feature
+            pass
+
+    def _get_active_sample(self):
+        """Get the currently active sample (if any)"""
+        if not self.current_directory:
+            return None
+
+        try:
+            sample_files = self.sample_io.list_sample_files(self.current_directory)
+            for filename in sample_files:
+                filepath = os.path.join(self.current_directory, filename)
+                status = self.sample_io.get_sample_status(filepath)
+                if status == 'loaded':  # Active sample
+                    data = self.sample_io.read_sample(filepath)
+                    return {
+                        'filename': filename,
+                        'filepath': filepath,
+                        'data': data,
+                        'label': data.get('Sample', {}).get('Label', filename),
+                        'created': data.get('Metadata', {}).get('created_timestamp', '')
+                    }
+        except:
+            pass
+        return None
+
+    def _update_badge(self):
+        """Update the badge to reflect current sample status"""
+        if self.is_draft:
+            # Draft state - unsaved sample
+            sample_label = "New Sample"
+            if self.draft_data:
+                sample_label = self.draft_data.get('Sample', {}).get('Label', 'New Sample')
+
+            self.badge_label.setText("DRAFT  " + sample_label)
+            self.badge_label.setBackground(Color(218, 165, 32))  # Amber/gold
+            self.badge_label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color(184, 134, 11), 2, True),
+                BorderFactory.createEmptyBorder(8, 15, 8, 15)
+            ))
+            self.badge_detail_label.setText("Unsaved changes")
+            self.btn_eject.setEnabled(False)  # Can't eject a draft
+        else:
+            active = self._get_active_sample()
+            if active:
+                # Active sample loaded
+                self.badge_label.setText("ACTIVE  " + active['label'])
+                self.badge_label.setBackground(Color(34, 139, 34))  # Forest green
+                self.badge_label.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(Color(0, 100, 0), 2, True),
+                    BorderFactory.createEmptyBorder(8, 15, 8, 15)
+                ))
+
+                # Format timestamp
+                created = active['created']
+                if created:
+                    try:
+                        dt = datetime.strptime(created[:19], "%Y-%m-%dT%H:%M:%S")
+                        time_str = dt.strftime("%I:%M %p").lstrip('0')
+                        self.badge_detail_label.setText("Loaded: " + time_str)
+                    except:
+                        self.badge_detail_label.setText("Loaded")
+                else:
+                    self.badge_detail_label.setText("Loaded")
+
+                self.btn_eject.setEnabled(True)  # Only enable eject when there's an active sample
+            else:
+                # Empty - no active sample
+                self.badge_label.setText("EMPTY")
+                self.badge_label.setBackground(Color(180, 180, 180))  # Grey
+                self.badge_label.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(Color(140, 140, 140), 2, True),
+                    BorderFactory.createEmptyBorder(8, 15, 8, 15)
+                ))
+
+                # Show last ejected sample if any
+                try:
+                    sample_files = self.sample_io.list_sample_files(self.current_directory)
+                    if sample_files:
+                        # Find most recently ejected
+                        last_ejected = None
+                        last_time = None
+                        for filename in sample_files:
+                            filepath = os.path.join(self.current_directory, filename)
+                            data = self.sample_io.read_sample(filepath)
+                            ejected = data.get('Metadata', {}).get('ejected_timestamp')
+                            if ejected:
+                                if last_time is None or ejected > last_time:
+                                    last_time = ejected
+                                    last_ejected = data.get('Sample', {}).get('Label', filename)
+
+                        if last_ejected:
+                            self.badge_detail_label.setText("Last: " + last_ejected)
+                        else:
+                            self.badge_detail_label.setText("No active sample")
+                    else:
+                        self.badge_detail_label.setText("No samples")
+                except:
+                    self.badge_detail_label.setText("No active sample")
+
+                self.btn_eject.setEnabled(False)
 
     def _refresh_sample_list(self):
         """Refresh the sample list from current directory"""
         if not self.current_directory:
             self.sample_table_model.clear_rows()
+            self._update_badge()
             return
 
         try:
@@ -416,10 +669,34 @@ class SampleManagerApp:
                     'filename': filename,
                     'created': created,
                     'users': users,
-                    'filepath': filepath
+                    'filepath': filepath,
+                    'is_draft': False
+                })
+
+            # Add draft as last row if it exists (chronologically last)
+            if self.is_draft:
+                draft_label = "<new sample>"
+                if self.draft_data:
+                    sample_label = self.draft_data.get('Sample', {}).get('Label', '')
+                    if sample_label:
+                        # Check if it's a copy
+                        if sample_label.endswith(' (copy)'):
+                            draft_label = "<copy of %s>" % sample_label[:-7]  # Remove " (copy)"
+                        else:
+                            draft_label = "<%s>" % sample_label
+
+                rows.append({
+                    'status': 'draft',
+                    'label': draft_label,
+                    'filename': None,  # No file yet
+                    'created': '',
+                    'users': [],
+                    'filepath': None,
+                    'is_draft': True
                 })
 
             self.sample_table_model.set_rows(rows)
+            self._update_badge()  # Update badge after refreshing list
 
         except Exception as e:
             self.update_status("Error refreshing sample list: %s" % str(e))
@@ -435,31 +712,105 @@ class SampleManagerApp:
         return self.current_schema_path
 
     def _on_sample_selected(self):
-        """Handle sample selection"""
+        """Handle sample selection - show read-only view"""
         selected_row = self.sample_table.getSelectedRow()
         if selected_row < 0:
             self.btn_duplicate.setEnabled(False)
             self.btn_edit.setEnabled(False)
+            self.btn_delete.setEnabled(False)
             self.selected_sample_filepath = None
+            # Clear form view
+            self._show_placeholder()
             # Refresh timeline to clear highlighting
             self.timeline_table.repaint()
             return
 
         # Get row data
         row_data = self.sample_table_model.get_row(selected_row)
+        is_draft = row_data.get('is_draft', False)
+
+        # If this is a draft row, ignore selection (draft is already being edited)
+        if is_draft:
+            # Don't change anything - draft is already in edit mode
+            return
+
         filename = row_data['filename']
+        status = row_data['status']
         self.current_sample_file = filename
         self.selected_sample_filepath = row_data['filepath']
 
-        # Enable buttons
+        # Enable/disable buttons based on sample status
         self.btn_duplicate.setEnabled(True)
         self.btn_edit.setEnabled(True)
 
-        # Load sample data into form
-        self._load_sample_into_form(filename)
+        # Delete only enabled for ejected samples (not active)
+        self.btn_delete.setEnabled(status == 'ejected')
+
+        # Show sample data in read-only view
+        self._show_sample_readonly(filename)
 
         # Refresh timeline to highlight this sample's events
         self.timeline_table.repaint()
+
+    def _show_placeholder(self):
+        """Show placeholder text in form panel"""
+        self.form_panel.removeAll()
+        placeholder = JLabel("Select a sample or create a new one", JLabel.CENTER)
+        placeholder.setFont(placeholder.getFont().deriveFont(Font.ITALIC, 12.0))
+        self.form_panel.add(placeholder, BorderLayout.CENTER)
+        self.form_panel.revalidate()
+        self.form_panel.repaint()
+
+    def _show_sample_readonly(self, filename):
+        """Show sample data in read-only view"""
+        if not self.current_directory:
+            return
+
+        try:
+            filepath = os.path.join(self.current_directory, filename)
+            data = self.sample_io.read_sample(filepath)
+
+            # Determine which schema to use
+            schema_version = data.get('Metadata', {}).get('schema_version', '0.0.1')
+            schema_path = self._get_schema_path_for_version(schema_version)
+
+            # Create form generator
+            self.form_generator = SchemaFormGenerator(schema_path)
+
+            # Create form panel
+            self.form_panel.removeAll()
+            form_scroll = self.form_generator.create_form_panel(None)  # No app ref = no modification tracking
+            self.form_panel.add(form_scroll, BorderLayout.CENTER)
+
+            # Load data
+            self.form_generator.load_data(data)
+
+            # Disable all form components (make read-only)
+            self._disable_form_components(form_scroll)
+
+            self.form_panel.revalidate()
+            self.form_panel.repaint()
+
+            self.update_status("Viewing sample: %s (read-only)" % filename)
+
+        except Exception as e:
+            self.update_status("Error loading sample: %s" % str(e))
+
+    def _disable_form_components(self, component):
+        """Recursively disable all input components in a container"""
+        if hasattr(component, 'getComponents'):
+            for child in component.getComponents():
+                self._disable_form_components(child)
+
+        # Disable ALL interactive components including buttons
+        if isinstance(component, (JTextField, JTextArea, JComboBox, JButton)):
+            if isinstance(component, JButton):
+                # Disable all buttons (including Add/Remove in arrays)
+                component.setEnabled(False)
+            else:
+                # Disable input fields
+                component.setEditable(False) if hasattr(component, 'setEditable') else None
+                component.setEnabled(False) if isinstance(component, JComboBox) else None
 
     def _load_sample_into_form(self, filename):
         """Load sample data into form"""
@@ -488,10 +839,10 @@ class SampleManagerApp:
             self.form_panel.revalidate()
             self.form_panel.repaint()
 
-            # Reset modification flag and disable buttons
+            # Reset modification flag and disable Save, but enable Cancel
             self.form_modified = False
             self.btn_save.setEnabled(False)
-            self.btn_cancel.setEnabled(False)
+            self.btn_cancel.setEnabled(True)  # Allow canceling edit mode
 
             self.update_status("Loaded sample: %s (schema v%s)" % (filename, schema_version))
 
@@ -500,13 +851,37 @@ class SampleManagerApp:
 
     def _new_sample(self):
         """Create new sample"""
-        # Auto-eject any active sample
-        try:
-            ejected = self.sample_io.auto_eject_active_sample(self.current_directory)
-            if ejected:
-                self.update_status("Auto-ejected active sample: %s" % ejected)
-        except Exception as e:
-            self.update_status("Warning: Could not auto-eject: %s" % str(e))
+        # Check if active sample exists and prompt to eject
+        active = self._get_active_sample()
+        if active:
+            result = JOptionPane.showConfirmDialog(
+                self.frame,
+                "Active sample '%s' is currently loaded.\nEject it and create new sample?" % active['label'],
+                "Eject Active Sample",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+            )
+            if result != JOptionPane.YES_OPTION:
+                return
+
+            # Eject the active sample
+            try:
+                self.sample_io.eject_sample(active['filepath'])
+                self._refresh_sample_list()
+                self._refresh_timeline()
+            except Exception as e:
+                MSG("Error ejecting sample: %s" % str(e))
+                return
+
+        # Set draft state first
+        self.current_sample_file = None
+        self.is_draft = True
+        self.draft_data = {}
+        self.form_modified = False
+
+        # Update badge and refresh sample list to show draft
+        self._update_badge()
+        self._refresh_sample_list()  # Refresh to show draft in list
 
         # Create fresh form generator using CURRENT schema for new samples
         self.form_generator = SchemaFormGenerator(self.current_schema_path)
@@ -518,12 +893,12 @@ class SampleManagerApp:
         self.form_panel.revalidate()
         self.form_panel.repaint()
 
-        self.current_sample_file = None
-        self.form_modified = False
+        # Set button states
         self.btn_save.setEnabled(False)
-        self.btn_cancel.setEnabled(False)
+        self.btn_cancel.setEnabled(True)  # Enable cancel for drafts
+
         self.tabbed_pane.setSelectedIndex(0)  # Switch to Sample Details tab
-        self.update_status("Creating new sample")
+        self.update_status("Creating new sample (draft)")
 
     def _duplicate_sample(self):
         """Duplicate selected sample"""
@@ -531,9 +906,35 @@ class SampleManagerApp:
             self.update_status("Please select a sample to duplicate")
             return
 
+        # Check if active sample exists and prompt to eject
+        active = self._get_active_sample()
+        if active:
+            result = JOptionPane.showConfirmDialog(
+                self.frame,
+                "Active sample '%s' is currently loaded.\nEject it and duplicate selected sample?" % active['label'],
+                "Eject Active Sample",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+            )
+            if result != JOptionPane.YES_OPTION:
+                return
+
+            # Eject the active sample
+            try:
+                self.sample_io.eject_sample(active['filepath'])
+                self._refresh_sample_list()
+                self._refresh_timeline()
+            except Exception as e:
+                MSG("Error ejecting sample: %s" % str(e))
+                return
+
         try:
             filepath = os.path.join(self.current_directory, self.current_sample_file)
             data = self.sample_io.read_sample(filepath)
+
+            # Append "(copy)" to label
+            if 'Sample' in data and 'Label' in data['Sample']:
+                data['Sample']['Label'] = data['Sample']['Label'] + " (copy)"
 
             # Remove metadata timestamps - will be regenerated with current schema
             if 'Metadata' in data:
@@ -541,6 +942,16 @@ class SampleManagerApp:
                 data['Metadata'].pop('modified_timestamp', None)
                 data['Metadata'].pop('ejected_timestamp', None)
                 data['Metadata'].pop('schema_version', None)
+
+            # Set draft state first
+            self.current_sample_file = None
+            self.is_draft = True
+            self.draft_data = data
+            self.form_modified = False
+
+            # Update badge and refresh sample list to show draft
+            self._update_badge()
+            self._refresh_sample_list()  # Refresh to show draft in list
 
             # Create fresh form generator using CURRENT schema for duplicates
             self.form_generator = SchemaFormGenerator(self.current_schema_path)
@@ -556,12 +967,12 @@ class SampleManagerApp:
             self.form_panel.revalidate()
             self.form_panel.repaint()
 
-            self.current_sample_file = None
-            self.form_modified = False
+            # Set button states
             self.btn_save.setEnabled(False)
-            self.btn_cancel.setEnabled(False)
+            self.btn_cancel.setEnabled(True)  # Enable cancel for drafts
+
             self.tabbed_pane.setSelectedIndex(0)  # Switch to Sample Details tab
-            self.update_status("Duplicating sample")
+            self.update_status("Duplicating sample (draft)")
 
         except Exception as e:
             self.update_status("Error duplicating sample: %s" % str(e))
@@ -572,28 +983,92 @@ class SampleManagerApp:
             MSG("Please select a sample to edit")
             return
 
+        # Check if this is the active sample and warn
+        active = self._get_active_sample()
+        if active and active['filename'] == self.current_sample_file:
+            result = JOptionPane.showConfirmDialog(
+                self.frame,
+                "This sample is currently loaded in the spectrometer.\nEdit anyway?",
+                "Active Sample Warning",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+            )
+            if result != JOptionPane.YES_OPTION:
+                return
+
         self._load_sample_into_form(self.current_sample_file)
+        self.is_draft = False  # Editing existing sample, not a draft
+        self._update_badge()
         self.tabbed_pane.setSelectedIndex(0)  # Switch to Sample Details tab
 
-    def _eject_sample(self):
-        """Eject selected sample (virtual - timestamp only)"""
+    def _eject_active_sample(self):
+        """Eject the currently active sample (virtual - timestamp only)"""
+        active = self._get_active_sample()
+        if not active:
+            MSG("No active sample to eject")
+            return
+
+        # Confirm ejection
+        result = JOptionPane.showConfirmDialog(
+            self.frame,
+            "Mark '%s' as ejected?" % active['label'],
+            "Confirm Ejection",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        )
+        if result != JOptionPane.YES_OPTION:
+            return
+
+        try:
+            self.sample_io.eject_sample(active['filepath'])
+            self._refresh_sample_list()
+            self._refresh_timeline()
+            self._update_badge()
+            self.update_status("Ejected sample: %s" % active['label'])
+        except Exception as e:
+            MSG("Error ejecting sample: %s" % str(e))
+
+    def _delete_sample(self):
+        """Delete the selected sample (must be ejected, not active)"""
         if not self.current_sample_file:
-            MSG("Please select a sample to eject")
+            MSG("Please select a sample to delete")
+            return
+
+        selected_row = self.sample_table.getSelectedRow()
+        if selected_row < 0:
+            return
+
+        row_data = self.sample_table_model.get_row(selected_row)
+        status = row_data['status']
+        label = row_data['label']
+
+        # Can't delete active samples
+        if status == 'loaded':
+            MSG("Cannot delete active sample.\nPlease eject it first.")
+            return
+
+        # Confirm deletion
+        result = JOptionPane.showConfirmDialog(
+            self.frame,
+            "Permanently delete '%s'?\nThis cannot be undone." % label,
+            "Confirm Deletion",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        )
+        if result != JOptionPane.YES_OPTION:
             return
 
         try:
             filepath = os.path.join(self.current_directory, self.current_sample_file)
-            self.sample_io.eject_sample(filepath)
+            os.remove(filepath)
             self._refresh_sample_list()
-            self.update_status("Ejected sample: %s" % self.current_sample_file)
+            self._refresh_timeline()
+            self._show_placeholder()
+            self.current_sample_file = None
+            self.selected_sample_filepath = None
+            self.update_status("Deleted sample: %s" % label)
         except Exception as e:
-            MSG("Error ejecting sample: %s" % str(e))
-
-    def _eject_sample_physical(self):
-        """Eject sample physically and virtually"""
-        self._eject_sample()
-        # TODO: Call TopSpin physical eject command
-        MSG("Physical eject: Please eject sample from spectrometer")
+            MSG("Error deleting sample: %s" % str(e))
 
     def _save_sample(self):
         """Save current form data"""
@@ -638,12 +1113,32 @@ class SampleManagerApp:
             # Write sample
             self.sample_io.write_sample(filepath, data, is_new=is_new)
 
+            # Clear draft state BEFORE refreshing list
+            self.is_draft = False
+            self.draft_data = None
+
             self._refresh_sample_list()
+            self._refresh_timeline()
 
             # Reset modification flag and disable buttons
             self.form_modified = False
             self.btn_save.setEnabled(False)
             self.btn_cancel.setEnabled(False)
+
+            # Update badge
+            self._update_badge()
+
+            # Update current sample file reference and re-select in table
+            self.current_sample_file = filename
+
+            # Find and select this sample in the table
+            for row_idx in range(self.sample_table_model.getRowCount()):
+                row_data = self.sample_table_model.get_row(row_idx)
+                if row_data['filename'] == filename:
+                    self.sample_table.setRowSelectionInterval(row_idx, row_idx)
+                    # Force reload in read-only view
+                    self._on_sample_selected()
+                    break
 
             self.update_status("Saved sample: %s" % filename)
 
@@ -652,8 +1147,8 @@ class SampleManagerApp:
 
     def _cancel_edit(self):
         """Cancel current edit"""
-        # If form was modified, confirm cancellation
-        if self.form_modified:
+        # If form was modified or is draft, confirm cancellation
+        if self.form_modified or self.is_draft:
             result = JOptionPane.showConfirmDialog(
                 self.frame,
                 "You have unsaved changes. Discard them?",
@@ -664,15 +1159,35 @@ class SampleManagerApp:
             if result != JOptionPane.YES_OPTION:  # User clicked No or closed dialog
                 return
 
-        self.current_sample_file = None
+        # Remember which sample we were viewing (before clearing state)
+        sample_to_reload = self.current_sample_file if not self.is_draft else None
+
+        # Clear all edit state FIRST (before refreshing list)
+        self.is_draft = False
+        self.draft_data = None
         self.form_modified = False
         self.btn_save.setEnabled(False)
         self.btn_cancel.setEnabled(False)
-        self.form_panel.removeAll()
-        placeholder = JLabel("Select a sample or create a new one", JLabel.CENTER)
-        self.form_panel.add(placeholder, BorderLayout.CENTER)
-        self.form_panel.revalidate()
-        self.form_panel.repaint()
+
+        # Update badge and refresh sample list (removes draft if it was showing)
+        self._update_badge()
+        self._refresh_sample_list()
+
+        # Reload the sample in read-only view if we were editing an existing sample
+        if sample_to_reload:
+            # Re-select the row in the table which will trigger _on_sample_selected
+            # This will properly reload it in read-only view
+            for row_idx in range(self.sample_table_model.getRowCount()):
+                row_data = self.sample_table_model.get_row(row_idx)
+                if row_data['filename'] == sample_to_reload:
+                    self.sample_table.setRowSelectionInterval(row_idx, row_idx)
+                    # Force the selection event to fire
+                    self._on_sample_selected()
+                    break
+        else:
+            self.current_sample_file = None
+            self._show_placeholder()
+
         self.update_status("Cancelled")
 
     def _refresh_timeline(self):
@@ -865,6 +1380,9 @@ class SampleTableCellRenderer(DefaultTableCellRenderer):
                 elif status == 'ejected':
                     component.setText(u"\u25CF")  # Filled circle
                     component.setForeground(Color(128, 128, 128))  # Grey
+                elif status == 'draft':
+                    component.setText(u"\u25CF")  # Filled circle
+                    component.setForeground(Color(218, 165, 32))  # Amber/gold
                 else:
                     component.setText(u"\u25CB")  # Hollow circle
                     component.setForeground(Color(128, 128, 128))
@@ -979,10 +1497,22 @@ class TimelineTableCellRenderer(DefaultTableCellRenderer):
 
 
 class SampleTableMouseListener(MouseAdapter):
-    """Mouse listener for sample table (right-click context menu)"""
+    """Mouse listener for sample table (double-click and right-click context menu)"""
 
     def __init__(self, app):
         self.app = app
+
+    def mouseClicked(self, event):
+        """Handle double-click to edit"""
+        if event.getClickCount() == 2:
+            # Get the selected row
+            table = event.getSource()
+            row = table.getSelectedRow()
+            if row >= 0:
+                row_data = table.getModel().get_row(row)
+                # Don't try to edit drafts (they're already in edit mode)
+                if row_data and not row_data.get('is_draft', False):
+                    self.app._edit_sample()
 
     def mousePressed(self, event):
         self._handle_popup(event)

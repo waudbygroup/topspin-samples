@@ -116,7 +116,8 @@ class SchemaFormGenerator:
 
             # Read-only text field
             text_field = JTextField()
-            text_field.setPreferredSize(Dimension(300, 24))
+            text_field.setPreferredSize(Dimension(200, 24))
+            text_field.setMinimumSize(Dimension(100, 24))
             text_field.setEditable(False)
             text_field.setBackground(Color(240, 240, 240))  # Light grey background
             if description:
@@ -220,8 +221,8 @@ class SchemaFormGenerator:
             # Number input with tooltip
             component = JTextField()
             component.setPreferredSize(Dimension(150, 24))
+            component.setMinimumSize(Dimension(80, 24))
             component.getDocument().addDocumentListener(FormModificationListener(self))
-            # No maximum size - allow resizing
             if description:
                 component.setToolTipText(description)
         elif field_type == 'string' or field_type == ['string']:
@@ -238,9 +239,9 @@ class SchemaFormGenerator:
                 self.components[field_path] = text_area  # Store text area, not scroll pane
             else:
                 component = JTextField()
-                component.setPreferredSize(Dimension(300, 24))
+                component.setPreferredSize(Dimension(200, 24))
+                component.setMinimumSize(Dimension(100, 24))
                 component.getDocument().addDocumentListener(FormModificationListener(self))
-                # No maximum size - allow resizing with window
                 if description:
                     component.setToolTipText(description)
         elif field_type == 'object':
@@ -249,9 +250,9 @@ class SchemaFormGenerator:
         else:
             # Default to text field
             component = JTextField()
-            component.setPreferredSize(Dimension(300, 24))
+            component.setPreferredSize(Dimension(200, 24))
+            component.setMinimumSize(Dimension(100, 24))
             component.getDocument().addDocumentListener(FormModificationListener(self))
-            # No maximum size - allow resizing with window
             if description:
                 component.setToolTipText(description)
 
@@ -306,13 +307,15 @@ class SchemaFormGenerator:
                 # Simple string item
                 item_panel = JPanel(FlowLayout(FlowLayout.LEFT))
                 text_field = JTextField(25)
+                text_field.getDocument().addDocumentListener(FormModificationListener(self))
                 item_panel.add(text_field)
 
                 remove_btn = JButton('Remove')
                 remove_btn.addActionListener(lambda e: (items_container.remove(item_panel),
                                                         items_list.remove(text_field),
                                                         items_container.revalidate(),
-                                                        items_container.repaint()))
+                                                        items_container.repaint(),
+                                                        self._mark_modified()))
                 item_panel.add(remove_btn)
 
                 items_container.add(item_panel)
@@ -325,6 +328,7 @@ class SchemaFormGenerator:
 
             items_container.revalidate()
             items_container.repaint()
+            self._mark_modified()  # Adding item counts as modification
 
         # Add button in its own panel for better alignment
         button_panel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 5))
@@ -370,14 +374,17 @@ class SchemaFormGenerator:
 
             if enum_values:
                 component = JComboBox(enum_values)
+                component.addActionListener(lambda e: self._mark_modified())
                 if description:
                     component.setToolTipText(description)
             elif prop_type == 'number':
                 component = JTextField(10)
+                component.getDocument().addDocumentListener(FormModificationListener(self))
                 if description:
                     component.setToolTipText(description)
             else:
                 component = JTextField(15)
+                component.getDocument().addDocumentListener(FormModificationListener(self))
                 if description:
                     component.setToolTipText(description)
 
@@ -391,7 +398,8 @@ class SchemaFormGenerator:
         remove_btn.addActionListener(lambda e: (items_container.remove(item_panel),
                                                 items_list.remove(item_components),
                                                 items_container.revalidate(),
-                                                items_container.repaint()))
+                                                items_container.repaint(),
+                                                self._mark_modified()))
         btn_panel.add(remove_btn)
         item_panel.add(btn_panel)
 
@@ -456,6 +464,7 @@ class SchemaFormGenerator:
                 item_panel = JPanel(FlowLayout(FlowLayout.LEFT))
                 text_field = JTextField(25)
                 text_field.setText(str(value))
+                text_field.getDocument().addDocumentListener(FormModificationListener(self))
                 item_panel.add(text_field)
 
                 remove_btn = JButton('Remove')
@@ -463,7 +472,8 @@ class SchemaFormGenerator:
                     items_container.remove(p),
                     items_list.remove(t),
                     items_container.revalidate(),
-                    items_container.repaint()))
+                    items_container.repaint(),
+                    self._mark_modified()))
                 item_panel.add(remove_btn)
 
                 items_container.add(item_panel)
@@ -496,6 +506,7 @@ class SchemaFormGenerator:
 
                     if enum_values:
                         component = JComboBox(enum_values)
+                        component.addActionListener(lambda e: self._mark_modified())
                         if description:
                             component.setToolTipText(description)
                         # Set selected value if exists
@@ -503,12 +514,14 @@ class SchemaFormGenerator:
                             component.setSelectedItem(value[prop_name])
                     elif prop_type == 'number':
                         component = JTextField(10)
+                        component.getDocument().addDocumentListener(FormModificationListener(self))
                         if description:
                             component.setToolTipText(description)
                         if prop_name in value:
                             component.setText(str(value[prop_name]))
                     else:
                         component = JTextField(15)
+                        component.getDocument().addDocumentListener(FormModificationListener(self))
                         if description:
                             component.setToolTipText(description)
                         if prop_name in value:
@@ -525,7 +538,8 @@ class SchemaFormGenerator:
                     items_container.remove(p),
                     items_list.remove(c),
                     items_container.revalidate(),
-                    items_container.repaint()))
+                    items_container.repaint(),
+                    self._mark_modified()))
                 btn_panel.add(remove_btn)
                 item_panel.add(btn_panel)
 

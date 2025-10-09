@@ -118,8 +118,8 @@ class SampleIO:
 
     def get_sample_status(self, filepath):
         """
-        Check if sample is active or ejected
-        Returns: 'active', 'ejected', or 'unknown'
+        Check if sample is loaded (active) or ejected
+        Returns: 'loaded', 'ejected', or 'unknown'
         """
         try:
             data = self.read_sample(filepath)
@@ -127,7 +127,7 @@ class SampleIO:
             if 'Metadata' in data and data['Metadata'].get('ejected_timestamp'):
                 return 'ejected'
             else:
-                return 'active'
+                return 'loaded'  # Active/loaded sample
         except Exception:
             return 'unknown'
 
@@ -167,7 +167,7 @@ class SampleIO:
         for filename in reversed(sample_files):
             filepath = os.path.join(directory, filename)
             status = self.get_sample_status(filepath)
-            if status == 'active':
+            if status == 'loaded':  # Active sample
                 return filename
 
         return None

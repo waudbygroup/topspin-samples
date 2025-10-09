@@ -150,12 +150,16 @@ class TimelineBuilder:
                     # Check for acqus file
                     acqus_path = os.path.join(item_path, 'acqus')
                     if os.path.isfile(acqus_path):
-                        # Get timestamp from acqus file modification time
+                        # Get timestamp from acqus file content (not modification time)
                         try:
-                            mtime = os.path.getmtime(acqus_path)
-                            dt = datetime.fromtimestamp(mtime)
+                            dt = self._get_experiment_timestamp(acqus_path)
 
-                            # Try to get experiment name from acqus
+                            # If we couldn't extract timestamp from file, fall back to mtime
+                            if dt is None:
+                                mtime = os.path.getmtime(acqus_path)
+                                dt = datetime.fromtimestamp(mtime)
+
+                            # Try to get experiment details from acqus
                             exp_details = self._parse_acqus_info(acqus_path)
 
                             entry = TimelineEntry('experiment', dt, str(expno), exp_details)
@@ -170,6 +174,35 @@ class TimelineBuilder:
             print("Warning: Could not list directory %s: %s" % (directory, str(e)))
 
         return entries
+
+    @staticmethod
+    def _get_experiment_timestamp(acqus_path):
+        """
+        Extract experiment timestamp from acqus file
+
+        Looks for a line like:
+        $$ 2023-10-11 11:04:48.196 +0100  waudbyc@cl-nmr-spec701
+
+        Returns datetime object or None if not found
+        """
+        import re
+
+        try:
+            with open(acqus_path, 'r') as f:
+                for line in f:
+                    # Look for timestamp pattern: $$ YYYY-MM-DD HH:MM:SS
+                    match = re.search(r'\$\$\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})', line)
+                    if match:
+                        timestamp_str = match.group(1)
+                        # Parse: 2023-10-11 11:04:48
+                        dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                        return dt
+
+            # Timestamp not found in file
+            return None
+
+        except Exception:
+            return None
 
     @staticmethod
     def _parse_iso_timestamp(timestamp_str):
