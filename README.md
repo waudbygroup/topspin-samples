@@ -20,13 +20,21 @@ This tool provides a simple JSON schema for recording sample metadata, creating 
 
 ## Installation
 
-1. Clone this repository to your TopSpin Python user directory:
+1. Clone this repository to a suitable directory (N.B. you cannot use locations within `/opt/topspin...`):
    ```bash
-   cd /path/to/topspin/exp/stan/nmr/py/user/
-   git clone https://github.com/your-org/sample-manager.git
+   cd /path/to/installation/directory/
+   git clone https://github.com/waudbygroup/sample-manager.git
    ```
 
-2. The application will be available as TopSpin Python commands.
+2. Use `setres` in Topspin and add the `src` directory within the sample-manager folder to the python paths.
+
+3. The application will now be available as TopSpin Python commands.
+
+4. To update the app, open a terminal and navigate to the sample-manager folder, then pull any updates:
+   ```bash
+   cd /path/to/installation/directory/sample-manager
+   git pull
+   ```
 
 ## Usage
 
