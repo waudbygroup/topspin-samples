@@ -158,8 +158,13 @@ class SchemaFormGenerator:
         prop_type = section_schema.get('type')
 
         if prop_type == 'array':
-            # Special handling for array types (e.g., Users)
-            component = self._create_array_field(section_name, section_schema)
+            # Check if this is a simple string array - use text field instead
+            items_schema = section_schema.get('items', {})
+            if items_schema.get('type') == 'string':
+                component = self._create_string_array_field(section_name, section_schema)
+            else:
+                # Complex array (e.g., objects) - use add/remove interface
+                component = self._create_array_field(section_name, section_schema)
             if component:
                 section_panel.add(component)
 
@@ -268,6 +273,48 @@ class SchemaFormGenerator:
             return field_panel
 
         return None
+
+    def _create_string_array_field(self, field_path, field_schema):
+        """Create a simple text field for string arrays (comma/semicolon separated)"""
+        description = field_schema.get('description', '')
+
+        field_panel = JPanel(GridBagLayout())
+        gbc = GridBagConstraints()
+        gbc.insets = Insets(5, 10, 5, 10)
+        gbc.anchor = GridBagConstraints.WEST
+
+        # Label
+        label_text = "Enter values separated by commas or semicolons"
+        jlabel = JLabel(label_text)
+        jlabel.setFont(jlabel.getFont().deriveFont(Font.ITALIC, 10.0))
+        jlabel.setForeground(Color(100, 100, 100))
+        if description:
+            jlabel.setToolTipText(description)
+
+        gbc.gridx = 0
+        gbc.gridy = 0
+        gbc.weightx = 1.0
+        gbc.fill = GridBagConstraints.HORIZONTAL
+        field_panel.add(jlabel, gbc)
+
+        # Text field
+        text_field = JTextField()
+        text_field.setPreferredSize(Dimension(300, 24))
+        text_field.setMinimumSize(Dimension(200, 24))
+        text_field.getDocument().addDocumentListener(FormModificationListener(self))
+        if description:
+            text_field.setToolTipText(description)
+
+        gbc.gridx = 0
+        gbc.gridy = 1
+        gbc.weightx = 1.0
+        gbc.fill = GridBagConstraints.HORIZONTAL
+        field_panel.add(text_field, gbc)
+
+        # Store component
+        self.components[field_path] = text_field
+
+        return field_panel
 
     def _create_array_field(self, field_path, field_schema):
         """Create array field with add/remove functionality"""
@@ -441,7 +488,12 @@ class SchemaFormGenerator:
                     self._populate_array_field(component, value)
             elif isinstance(component, JTextField):
                 if value is not None:
-                    component.setText(str(value))
+                    # Check if value is a list (for string arrays)
+                    if isinstance(value, list):
+                        # Join list items with comma separator
+                        component.setText(', '.join(str(v) for v in value))
+                    else:
+                        component.setText(str(value))
             elif isinstance(component, JTextArea):
                 if value is not None:
                     component.setText(str(value))
@@ -569,14 +621,22 @@ class SchemaFormGenerator:
             elif isinstance(component, JTextField):
                 text = component.getText().strip()
                 if text:
-                    # Try to convert to number if it looks like one
-                    try:
-                        if '.' in text:
-                            value = float(text)
-                        else:
-                            value = int(text)
-                    except ValueError:
-                        value = text
+                    # Check if this field is a string array in the schema
+                    if self._is_string_array_field(field_path):
+                        # Parse comma/semicolon separated values
+                        import re
+                        # Split by comma or semicolon, strip whitespace
+                        items = re.split(r'[,;]', text)
+                        value = [item.strip() for item in items if item.strip()]
+                    else:
+                        # Try to convert to number if it looks like one
+                        try:
+                            if '.' in text:
+                                value = float(text)
+                            else:
+                                value = int(text)
+                        except ValueError:
+                            value = text
             elif isinstance(component, JTextArea):
                 text = component.getText().strip()
                 if text:
@@ -620,6 +680,26 @@ class SchemaFormGenerator:
                     result.append(item_data)
 
         return result if result else None
+
+    def _is_string_array_field(self, field_path):
+        """Check if a field path represents a string array in the schema"""
+        # Get the schema definition for this field
+        keys = field_path.split('.')
+        schema_obj = self.schema.get('properties', {})
+
+        for key in keys:
+            if key in schema_obj:
+                schema_obj = schema_obj[key]
+            else:
+                return False
+
+        # Check if it's an array with string items
+        if isinstance(schema_obj, dict):
+            if schema_obj.get('type') == 'array':
+                items = schema_obj.get('items', {})
+                return items.get('type') == 'string'
+
+        return False
 
     @staticmethod
     def _get_nested_value(data, path):

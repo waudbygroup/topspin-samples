@@ -274,6 +274,10 @@ class SampleManagerApp:
         ))
         self.badge_label.setAlignmentX(Component.CENTER_ALIGNMENT)
 
+        # Make badge clickable
+        self.badge_label.addMouseListener(BadgeClickListener(self))
+        self.badge_label.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+
         # Detail label - shows timestamp or other info
         self.badge_detail_label = JLabel("No active sample", JLabel.CENTER)
         self.badge_detail_label.setFont(self.badge_detail_label.getFont().deriveFont(Font.PLAIN, 10.0))
@@ -1645,6 +1649,31 @@ class TimelineTableCellRenderer(DefaultTableCellRenderer):
         return component
 
 
+class BadgeClickListener(MouseAdapter):
+    """Mouse listener for badge clicks - navigate to active sample"""
+
+    def __init__(self, app):
+        self.app = app
+
+    def mouseClicked(self, event):
+        """Handle click on badge"""
+        # Navigate to active sample in the list
+        active = self.app._get_active_sample()
+        if active:
+            # Find this sample in the table and select it
+            sample_files = self.app.sample_io.list_sample_files(self.app.current_directory)
+            for idx, filename in enumerate(sample_files):
+                if filename == active['filename']:
+                    self.app.sample_table.setRowSelectionInterval(idx, idx)
+                    # Scroll to make it visible
+                    self.app.sample_table.scrollRectToVisible(
+                        self.app.sample_table.getCellRect(idx, 0, True)
+                    )
+                    # Switch to Sample Details tab
+                    self.app.tabbed_pane.setSelectedIndex(0)
+                    break
+
+
 class SampleTableMouseListener(MouseAdapter):
     """Mouse listener for sample table (double-click and right-click context menu)"""
 
@@ -1678,35 +1707,46 @@ class SampleTableMouseListener(MouseAdapter):
             if row >= 0 and row != table.getSelectedRow():
                 table.setRowSelectionInterval(row, row)
 
+            # Get row data to determine enabled states
+            row_data = None
+            if row >= 0:
+                row_data = table.getModel().get_row(row)
+
             # Create context menu
             popup = JPopupMenu()
 
-            item_new = JMenuItem("New Sample")
+            # New - always enabled
+            item_new = JMenuItem("New...")
             item_new.addActionListener(lambda e: self.app._new_sample())
             popup.add(item_new)
 
-            if row >= 0:
+            if row >= 0 and row_data and not row_data.get('is_draft', False):
                 popup.addSeparator()
 
-                item_duplicate = JMenuItem("Duplicate")
+                # Duplicate - enabled when sample is selected
+                item_duplicate = JMenuItem("Duplicate...")
                 item_duplicate.addActionListener(lambda e: self.app._duplicate_sample())
                 popup.add(item_duplicate)
 
+                # Edit - enabled when sample is selected
                 item_edit = JMenuItem("Edit")
                 item_edit.addActionListener(lambda e: self.app._edit_sample())
                 popup.add(item_edit)
 
                 popup.addSeparator()
 
-                item_eject = JMenuItem("Eject (Virtual)")
-                item_eject.addActionListener(lambda e: self.app._eject_sample())
+                # Eject - only enabled for loaded (active) samples
+                status = row_data.get('status', '')
+                item_eject = JMenuItem("Eject")
+                item_eject.setEnabled(status == 'loaded')
+                item_eject.addActionListener(lambda e: self.app._eject_active_sample())
                 popup.add(item_eject)
 
-                item_eject_phys = JMenuItem("Eject (Physical)")
-                item_eject_phys.addActionListener(lambda e: self.app._eject_sample_physical())
-                popup.add(item_eject_phys)
-
-                # TODO: Add delete option in future
+                # Delete - only enabled for ejected samples
+                item_delete = JMenuItem("Delete")
+                item_delete.setEnabled(status == 'ejected')
+                item_delete.addActionListener(lambda e: self.app._delete_sample())
+                popup.add(item_delete)
 
             popup.show(event.getComponent(), event.getX(), event.getY())
 
