@@ -4,6 +4,7 @@ A lightweight sample metadata management system for Bruker TopSpin, built with J
 
 ![Screenshot - Sample editing](assets/screenshot.png)
 ![Screenshot - Experimental timeline](assets/screenshot-timeline.png)
+![Screenshot - Sample catalogue and search](assets/screenshot-catalogue.png)
 
 
 ## Overview
