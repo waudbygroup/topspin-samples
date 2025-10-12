@@ -1,5 +1,9 @@
 name: Sync Schema
 
+permissions:
+  contents: write
+  pull-requests: write
+  
 on:
   schedule:
     # Run nightly at 2 AM UTC
