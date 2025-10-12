@@ -184,9 +184,13 @@ sample-manager/
 │   │   ├── sample_io.py     # File I/O
 │   │   └── timeline.py      # Timeline logic
 │   └── schemas/
-│       ├── current.json     # Symlink to active schema
-│       ├── v0.0.1.json
-│       └── v0.0.2.json
+│       ├── current/
+│       │   └── schema.json  # Active schema
+│       └── versions/
+│           ├── v0.0.1/
+│           │   └── schema.json
+│           └── v0.0.2/
+│               └── schema.json
 ├── CLAUDE.md                # Development documentation
 ├── README.md                # This file
 └── CONTRIBUTORS.md

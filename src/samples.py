@@ -48,7 +48,7 @@ class SampleManagerApp:
             script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 
         self.script_dir = script_dir
-        self.current_schema_path = os.path.join(script_dir, 'schemas', 'current.json')
+        self.current_schema_path = os.path.join(script_dir, 'schemas', 'current', 'schema.json')
         self.form_generator = None
         self.current_sample_file = None
         self.timeline_builder = TimelineBuilder(self.sample_io)
@@ -723,14 +723,59 @@ if curdata:
             self.update_status("Error refreshing sample list: %s" % str(e))
 
     def _get_schema_path_for_version(self, version):
-        """Get schema path for a specific version"""
+        """Get schema path for a specific version
+
+        Returns:
+            str: Path to schema file, or None if not found
+        """
         # Try to load the specific version
-        versioned_path = os.path.join(self.script_dir, 'schemas', 'v%s.json' % version)
+        versioned_path = os.path.join(self.script_dir, 'schemas', 'versions', 'v%s' % version, 'schema.json')
         if os.path.exists(versioned_path):
             return versioned_path
 
-        # Fall back to current schema if version not found
-        return self.current_schema_path
+        # Schema version not found
+        return None
+
+    def _create_schema_error_panel(self, schema_version):
+        """Create a panel displaying a schema version error
+
+        Args:
+            schema_version: The schema version that was not found
+
+        Returns:
+            JPanel: Panel with error message
+        """
+        from javax.swing import JPanel, JLabel, BorderFactory
+        from java.awt import BorderLayout, Color, Font
+
+        error_panel = JPanel(BorderLayout())
+        error_panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20))
+
+        # Create message panel
+        message_panel = JPanel()
+        message_panel.setLayout(BoxLayout(message_panel, BoxLayout.Y_AXIS))
+
+        # Title
+        title = JLabel("Schema Version Not Found")
+        title.setFont(Font("SansSerif", Font.BOLD, 16))
+        title.setForeground(Color(200, 50, 50))
+        title.setAlignmentX(Component.CENTER_ALIGNMENT)
+        message_panel.add(title)
+        message_panel.add(Box.createVerticalStrut(20))
+
+        # Details
+        details = JLabel("<html><div style='text-align: center;'>"
+                        "This sample requires schema version <b>%s</b><br><br>"
+                        "Expected location:<br>"
+                        "<code>schemas/versions/v%s/schema.json</code><br><br>"
+                        "Please update your installation to receive<br>"
+                        "the missing schema files."
+                        "</div></html>" % (schema_version, schema_version))
+        details.setAlignmentX(Component.CENTER_ALIGNMENT)
+        message_panel.add(details)
+
+        error_panel.add(message_panel, BorderLayout.CENTER)
+        return error_panel
 
     def _on_sample_selected(self):
         """Handle sample selection - show read-only view"""
@@ -799,6 +844,16 @@ if curdata:
             schema_version = data.get('Metadata', {}).get('schema_version', '0.0.1')
             schema_path = self._get_schema_path_for_version(schema_version)
 
+            if schema_path is None:
+                # Schema version not found - show error in form area
+                self.form_panel.removeAll()
+                error_panel = self._create_schema_error_panel(schema_version)
+                self.form_panel.add(error_panel, BorderLayout.CENTER)
+                self.form_panel.revalidate()
+                self.form_panel.repaint()
+                self.update_status("Cannot display sample - schema v%s not found" % schema_version)
+                return
+
             # Create form generator
             self.form_generator = SchemaFormGenerator(schema_path)
 
@@ -849,6 +904,16 @@ if curdata:
             # Determine which schema to use for editing
             schema_version = data.get('Metadata', {}).get('schema_version', '0.0.1')
             schema_path = self._get_schema_path_for_version(schema_version)
+
+            if schema_path is None:
+                # Schema version not found - show error in form area
+                self.form_panel.removeAll()
+                error_panel = self._create_schema_error_panel(schema_version)
+                self.form_panel.add(error_panel, BorderLayout.CENTER)
+                self.form_panel.revalidate()
+                self.form_panel.repaint()
+                self.update_status("Cannot edit sample - schema v%s not found" % schema_version)
+                return
 
             # Always create a fresh form generator to avoid stale component references
             self.form_generator = SchemaFormGenerator(schema_path)

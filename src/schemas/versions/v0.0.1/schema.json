@@ -1,7 +1,6 @@
 {
     "title": "NMR Sample Metadata",
     "description": "Schema for NMR sample metadata collection in TopSpin environments",
-    "version": "0.0.2",
     "type": "object",
     "additionalProperties": false,
     "required": [],
@@ -32,15 +31,11 @@
                                 "description": "Molecule name"
                             },
                             "Concentration": {
-                                "type": [
-                                    "number",
-                                    "null"
-                                ],
+                                "type": "number",
                                 "minimum": 0
                             },
                             "Unit": {
                                 "enum": [
-                                    "",
                                     "uM",
                                     "mM",
                                     "M",
@@ -49,12 +44,11 @@
                                     "%v/v",
                                     "equiv"
                                 ],
-                                "default": "",
+                                "default": "uM",
                                 "type": "string"
                             },
                             "Isotopic labelling": {
                                 "enum": [
-                                    "",
                                     "unlabelled",
                                     "15N",
                                     "13C",
@@ -71,7 +65,6 @@
                                     "custom"
                                 ],
                                 "type": "string",
-                                "default": "",
                                 "description": "Type of isotopic labelling used"
                             },
                             "Custom labelling": {
@@ -107,15 +100,11 @@
                                 "description": "Buffer component name (e.g., Tris-HCl, NaCl, EDTA)"
                             },
                             "Concentration": {
-                                "type": [
-                                    "number",
-                                    "null"
-                                ],
+                                "type": "number",
                                 "minimum": 0
                             },
                             "Unit": {
                                 "enum": [
-                                    "",
                                     "uM",
                                     "mM",
                                     "M",
@@ -124,7 +113,7 @@
                                     "%v/v",
                                     "$w/w"
                                 ],
-                                "default": "",
+                                "default": "mM",
                                 "type": "string"
                             }
                         }
@@ -133,27 +122,21 @@
                 },
                 "Chemical shift reference": {
                     "enum": [
-                        "",
                         "none",
                         "DSS",
                         "TMS",
                         "TSP"
                     ],
                     "type": "string",
-                    "default": "",
                     "description": "Chemical shift reference compound"
                 },
                 "Reference concentration": {
-                    "type": [
-                        "number",
-                        "null"
-                    ],
+                    "type": "number",
                     "minimum": 0,
                     "description": "Concentration of chemical shift reference"
                 },
                 "Reference unit": {
                     "enum": [
-                        "",
                         "uM",
                         "mM",
                         "M",
@@ -162,22 +145,20 @@
                         "%v/v",
                         "%w/w"
                     ],
-                    "default": "",
+                    "default": "%w/v",
                     "type": "string",
                     "description": "Unit for reference concentration"
                 },
                 "Solvent": {
                     "enum": [
-                        "",
+                        "custom",
                         "10% D2O",
                         "100% D2O",
                         "CDCl3",
                         "D6-DMSO",
-                        "D4-Methanol",
-                        "custom"
+                        "D4-Methanol"
                     ],
                     "type": "string",
-                    "default": "",
                     "description": "Solvent composition"
                 },
                 "Custom solvent": {
@@ -192,28 +173,24 @@
             "properties": {
                 "Diameter": {
                     "enum": [
-                        "",
                         "1.7 mm",
                         "3 mm",
                         "5 mm"
                     ],
-                    "default": "",
                     "type": "string",
                     "description": "NMR tube diameter"
                 },
                 "Type": {
                     "type": "string",
                     "enum": [
-                        "",
                         "regular",
                         "shigemi",
                         "shaped",
                         "coaxial"
                     ],
-                    "default": "",
                     "description": "Type of NMR tube"
                 },
-                "Sample Volume (μL)": {
+                "Sample Volume": {
                     "type": [
                         "number",
                         "null"
@@ -222,6 +199,7 @@
                 },
                 "SampleJet Rack Position": {
                     "type": "string",
+                    "pattern": "^([A-H][1-9][0-9]?|)$",
                     "description": "Position in SampleJet rack (e.g., A3, G11)"
                 },
                 "SampleJet Rack ID": {
@@ -270,7 +248,7 @@
                 "schema_version": {
                     "type": "string",
                     "description": "Version of this schema used",
-                    "default": "0.0.2"
+                    "default": "0.0.1"
                 }
             }
         }

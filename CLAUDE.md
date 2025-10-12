@@ -15,8 +15,8 @@ Here we describe a simple JSON schema for recording sample metadata, creating a 
 
 ## Data Model
 
-- **Schema versioning**: Stored in `schemas/` with semantic versioning (referenced in sample metadata)
-- **Current schema**: Symlink `schemas/current` points to active version
+- **Schema versioning**: Stored in `schemas/versions/` with semantic versioning (referenced in sample metadata)
+- **Current schema**: `schemas/current/schema.json` points to active version
 - **Validation**: Client-side validation using JSON Schema
 - **Evolution**: Schema migrations for backwards compatibility
 
@@ -560,7 +560,7 @@ Build a **standalone Jython/Swing application** that runs entirely within TopSpi
 ## Technical Specifications
 
 ### Form Generation from Schema
-- **Pure Swing components** - no React, dynamically built from `schemas/current.json`
+- **Pure Swing components** - no React, dynamically built from `schemas/current/schema.json`
 - **Field types**: text inputs, number inputs, dropdowns (enums), array fields (add/remove)
 - **Nested structures**: Sample.Components, Buffer.Components as scrollable panels
 - **Optional fields**: All fields are optional per schema
@@ -625,8 +625,11 @@ import os    # File system operations
 /exp/stan/nmr/py/user/sample-manager/
 ├── src/
 │   ├── schemas/
-│   │   ├── current.json → v0.0.1.json (symlink or copy)
-│   │   └── v0.0.1.json
+│   │   ├── current/
+│   │   │   └── schema.json
+│   │   └── versions/
+│   │       └── v0.0.1/
+│   │           └── schema.json
 │   ├── samples.py          # Main GUI application
 │   ├── aij.py              # Auto-inject command
 │   ├── aej.py              # Auto-eject command
@@ -725,7 +728,7 @@ User workflow:
 - **TopSpin Jython API**: `info/python-programming.pdf`
 - **Web app code**: `info/js/*.js` (for timeline parsing logic)
 - **Screenshots**: `info/*.png` (for UI reference)
-- **Schema**: `src/schemas/current.json`
+- **Schema**: `src/schemas/current/schema.json`
 
 ## Development Notes
 

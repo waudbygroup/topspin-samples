@@ -190,7 +190,7 @@ Before using in production, test the following:
 
 2. Ensure schema file exists:
    ```
-   src/schemas/current.json
+   src/schemas/current/schema.json
    ```
 
 3. Run from TopSpin command line:

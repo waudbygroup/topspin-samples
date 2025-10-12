@@ -148,7 +148,7 @@ Expected behavior:
 ### Problem: Form doesn't appear or looks wrong
 
 **Possible causes**:
-1. Schema file missing: check `src/schemas/current.json` exists
+1. Schema file missing: check `src/schemas/current/schema.json` exists
 2. Schema file malformed: validate JSON syntax
 3. Jython version incompatibility: confirm Jython 2.7.2
 
