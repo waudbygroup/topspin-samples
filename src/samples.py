@@ -89,6 +89,10 @@ class SampleManagerApp:
         self.catalogue_table = None
         self.catalogue_table_model = None
         self.catalogue_search_field = None
+        self.catalogue_btn_view = None
+        self.catalogue_btn_edit = None
+        self.catalogue_btn_duplicate = None
+        self.catalogue_center_panel = None  # CardLayout panel for table/empty state
 
         # Initialize
         self._create_gui()
@@ -137,7 +141,7 @@ class SampleManagerApp:
             title = "%s (version ref: %s)" % (title, git_version)
 
         self.frame = JFrame(title)
-        self.frame.setSize(900, 700)
+        self.frame.setSize(1200, 700)
         self.frame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE)
 
         # Main container
@@ -512,12 +516,78 @@ class SampleManagerApp:
         # Custom renderer for tooltips
         self.catalogue_table.setDefaultRenderer(Object, CatalogueTableCellRenderer())
 
+        # Selection listener to enable/disable buttons
+        self.catalogue_table.getSelectionModel().addListSelectionListener(
+            lambda e: self._on_catalogue_selection_changed() if not e.getValueIsAdjusting() else None
+        )
+
         # Double-click listener to navigate to sample
         self.catalogue_table.addMouseListener(CatalogueMouseListener(self))
 
+        # Create a CardLayout panel to switch between table and empty state
+        self.catalogue_center_panel = JPanel(CardLayout())
+
+        # Table view
         scroll_pane = JScrollPane(self.catalogue_table)
         scroll_pane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)
-        panel.add(scroll_pane, BorderLayout.CENTER)
+        self.catalogue_center_panel.add(scroll_pane, "TABLE")
+
+        # Empty state view
+        empty_panel = self._create_catalogue_empty_state()
+        self.catalogue_center_panel.add(empty_panel, "EMPTY")
+
+        panel.add(self.catalogue_center_panel, BorderLayout.CENTER)
+
+        # Bottom panel with action buttons
+        bottom_panel = JPanel(FlowLayout(FlowLayout.LEFT, 5, 5))
+        bottom_panel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0))
+
+        self.catalogue_btn_view = JButton('View', actionPerformed=lambda e: self._catalogue_view_selected())
+        self.catalogue_btn_view.setEnabled(False)
+        self.catalogue_btn_view.setToolTipText("View selected sample (read-only)")
+        bottom_panel.add(self.catalogue_btn_view)
+
+        self.catalogue_btn_edit = JButton('Edit', actionPerformed=lambda e: self._catalogue_edit_selected())
+        self.catalogue_btn_edit.setEnabled(False)
+        self.catalogue_btn_edit.setToolTipText("Edit selected sample")
+        bottom_panel.add(self.catalogue_btn_edit)
+
+        self.catalogue_btn_duplicate = JButton('Duplicate into current experiment', actionPerformed=lambda e: self._catalogue_duplicate_selected())
+        self.catalogue_btn_duplicate.setEnabled(False)
+        self.catalogue_btn_duplicate.setToolTipText("Duplicate selected sample into the current experiment directory")
+        bottom_panel.add(self.catalogue_btn_duplicate)
+
+        panel.add(bottom_panel, BorderLayout.SOUTH)
+
+        return panel
+
+    def _create_catalogue_empty_state(self):
+        """Create empty state panel shown when no root directories are configured"""
+        panel = JPanel()
+        panel.setLayout(BoxLayout(panel, BoxLayout.Y_AXIS))
+        panel.setBorder(BorderFactory.createEmptyBorder(50, 20, 50, 20))
+
+        # Message
+        message_label = JLabel("No search directories configured")
+        message_label.setFont(message_label.getFont().deriveFont(Font.BOLD, 16.0))
+        message_label.setAlignmentX(Component.CENTER_ALIGNMENT)
+        panel.add(message_label)
+
+        panel.add(Box.createVerticalStrut(10))
+
+        # Instructions
+        instructions = JLabel("Please add search directories using the Settings button")
+        instructions.setFont(instructions.getFont().deriveFont(Font.PLAIN, 12.0))
+        instructions.setForeground(Color(100, 100, 100))
+        instructions.setAlignmentX(Component.CENTER_ALIGNMENT)
+        panel.add(instructions)
+
+        panel.add(Box.createVerticalStrut(20))
+
+        # Settings button
+        btn_settings = JButton('Settings...', actionPerformed=lambda e: self._show_settings())
+        btn_settings.setAlignmentX(Component.CENTER_ALIGNMENT)
+        panel.add(btn_settings)
 
         return panel
 
@@ -591,12 +661,16 @@ if curdata:
         self.update_status("Directory: %s" % directory)
 
     def _auto_select_sample_for_directory(self):
-        """Auto-select the sample associated with current experiment via timeline"""
+        """Auto-select the sample associated with current experiment via timeline or timestamp
+
+        If in an experiment directory (expno), selects the sample that was active during that experiment.
+        If in a parent directory, selects the active sample or most recently created/modified sample.
+        """
         if not self.current_directory:
             return
 
         try:
-            # Get current experiment number from directory path
+            # Try to get current experiment number from directory path
             # Directory structure: /path/to/data/experimentName/expno
             expno = None
             try:
@@ -605,7 +679,8 @@ if curdata:
                 expno_str = dir_parts[-1]  # Last part should be expno
                 expno = int(expno_str)
             except (ValueError, IndexError):
-                # Not a valid experiment directory
+                # Not in an expno directory - select active sample or most recent
+                self._select_active_or_recent_sample()
                 return
 
             # Build timeline to find which sample was active during this experiment
@@ -650,6 +725,55 @@ if curdata:
                             self.sample_table.getCellRect(idx, 0, True)
                         )
                         break
+
+        except Exception as e:
+            # Silently fail - auto-selection is a convenience feature
+            pass
+
+    def _select_active_or_recent_sample(self):
+        """Select the active sample, or if none, the most recently created/modified sample"""
+        if not self.current_directory:
+            return
+
+        try:
+            sample_files = self.sample_io.list_sample_files(self.current_directory)
+            if not sample_files:
+                return
+
+            # First, look for an active (loaded) sample
+            for idx, filename in enumerate(sample_files):
+                filepath = os.path.join(self.current_directory, filename)
+                status = self.sample_io.get_sample_status(filepath)
+                if status == 'loaded':
+                    self.sample_table.setRowSelectionInterval(idx, idx)
+                    self.sample_table.scrollRectToVisible(
+                        self.sample_table.getCellRect(idx, 0, True)
+                    )
+                    return
+
+            # No active sample - select the most recent by timestamp
+            # Find sample with most recent created or modified timestamp
+            most_recent_idx = 0
+            most_recent_time = None
+
+            for idx, filename in enumerate(sample_files):
+                filepath = os.path.join(self.current_directory, filename)
+                data = self.sample_io.read_sample(filepath)
+                if data:
+                    metadata = data.get('Metadata', {})
+                    # Use modified timestamp if available, otherwise created
+                    timestamp = metadata.get('modified_timestamp') or metadata.get('created_timestamp')
+                    if timestamp:
+                        if most_recent_time is None or timestamp > most_recent_time:
+                            most_recent_time = timestamp
+                            most_recent_idx = idx
+
+            # Select the most recent sample
+            if most_recent_time is not None:
+                self.sample_table.setRowSelectionInterval(most_recent_idx, most_recent_idx)
+                self.sample_table.scrollRectToVisible(
+                    self.sample_table.getCellRect(most_recent_idx, 0, True)
+                )
 
         except Exception as e:
             # Silently fail - auto-selection is a convenience feature
@@ -1399,9 +1523,18 @@ if curdata:
         roots = self.config.get_search_roots()
 
         if not roots:
+            # Show empty state
             self.catalogue_table_model.clear_rows()
+            if self.catalogue_center_panel:
+                card_layout = self.catalogue_center_panel.getLayout()
+                card_layout.show(self.catalogue_center_panel, "EMPTY")
             self.update_status("No search directories configured. Use Settings to add directories.")
             return
+
+        # Show table view
+        if self.catalogue_center_panel:
+            card_layout = self.catalogue_center_panel.getLayout()
+            card_layout.show(self.catalogue_center_panel, "TABLE")
 
         self.update_status("Scanning directories for samples...")
 
@@ -1465,6 +1598,153 @@ if curdata:
                     # Switch to Sample Details tab
                     self.tabbed_pane.setSelectedIndex(0)
                     break
+
+    def _on_catalogue_selection_changed(self):
+        """Handle selection change in catalogue table - enable/disable buttons"""
+        if not self.catalogue_table or not self.catalogue_btn_view:
+            return
+
+        has_selection = self.catalogue_table.getSelectedRow() >= 0
+
+        if self.catalogue_btn_view:
+            self.catalogue_btn_view.setEnabled(has_selection)
+        if self.catalogue_btn_edit:
+            self.catalogue_btn_edit.setEnabled(has_selection)
+        if self.catalogue_btn_duplicate:
+            self.catalogue_btn_duplicate.setEnabled(has_selection)
+
+    def _get_selected_catalogue_row_data(self):
+        """Get the data for the currently selected catalogue row"""
+        if not self.catalogue_table:
+            return None
+
+        selected_row = self.catalogue_table.getSelectedRow()
+        if selected_row < 0:
+            return None
+
+        # Convert to model row in case table is sorted
+        model_row = self.catalogue_table.convertRowIndexToModel(selected_row)
+        return self.catalogue_table_model.get_row(model_row)
+
+    def _catalogue_view_selected(self):
+        """View button handler - navigate to selected sample"""
+        row_data = self._get_selected_catalogue_row_data()
+        if row_data:
+            self.handle_catalogue_double_click(row_data)
+
+    def _catalogue_edit_selected(self):
+        """Edit button handler - navigate to selected sample and enter edit mode"""
+        row_data = self._get_selected_catalogue_row_data()
+        if not row_data:
+            return
+
+        directory = row_data.get('directory')
+        filename = row_data.get('filename')
+
+        if directory and filename:
+            # Navigate to the directory
+            self.set_directory(directory, auto_select=False)
+
+            # Find and select the sample in the list
+            sample_files = self.sample_io.list_sample_files(directory)
+            for idx, f in enumerate(sample_files):
+                if f == filename:
+                    self.current_sample_file = filename
+                    self.sample_table.setRowSelectionInterval(idx, idx)
+                    # Trigger edit mode
+                    self._edit_sample()
+                    # Switch to Sample Details tab
+                    self.tabbed_pane.setSelectedIndex(0)
+                    break
+
+    def _catalogue_duplicate_selected(self):
+        """Duplicate button handler - duplicate selected sample into current directory"""
+        row_data = self._get_selected_catalogue_row_data()
+        if not row_data:
+            return
+
+        filepath = row_data.get('filepath')
+        if not filepath:
+            return
+
+        # Check if we have a current directory
+        if not self.current_directory:
+            MSG("Please navigate to a directory first")
+            return
+
+        try:
+            # Read the sample data
+            data = self.sample_io.read_sample(filepath)
+
+            # Append "(copy)" to label
+            if 'Sample' in data and 'Label' in data['Sample']:
+                data['Sample']['Label'] = data['Sample']['Label'] + " (copy)"
+
+            # Remove metadata timestamps - will be regenerated with current schema
+            if 'Metadata' in data:
+                data['Metadata'].pop('created_timestamp', None)
+                data['Metadata'].pop('modified_timestamp', None)
+                data['Metadata'].pop('ejected_timestamp', None)
+                data['Metadata'].pop('schema_version', None)
+
+            # Check if active sample exists and prompt to eject
+            active = self._get_active_sample()
+            if active:
+                result = JOptionPane.showConfirmDialog(
+                    self.frame,
+                    "Active sample '%s' is currently loaded.\nEject it and duplicate selected sample?" % active['label'],
+                    "Eject Active Sample",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+                )
+                if result != JOptionPane.YES_OPTION:
+                    return
+
+                # Eject the active sample
+                self.sample_io.eject_sample(active['filepath'])
+                self._refresh_sample_list()
+                self._refresh_timeline()
+
+            # Set draft state
+            self.current_sample_file = None
+            self.is_draft = True
+            self.draft_data = data
+            self.form_modified = False
+
+            # Update badge and refresh sample list to show draft
+            self._update_badge()
+            self._refresh_sample_list()
+
+            # Create fresh form generator using CURRENT schema for duplicates
+            self.form_generator = SchemaFormGenerator(self.current_schema_path)
+
+            # Create form first
+            self.form_panel.removeAll()
+            form_scroll = self.form_generator.create_form_panel(self)
+            self.form_panel.add(form_scroll, BorderLayout.CENTER)
+
+            # Then load data
+            self.form_generator.load_data(data)
+
+            self.form_panel.revalidate()
+            self.form_panel.repaint()
+
+            # Set button states
+            self.btn_new.setEnabled(True)
+            self.btn_duplicate.setEnabled(False)
+            self.btn_edit.setEnabled(False)
+            self.btn_eject.setEnabled(False)
+            self.btn_delete.setEnabled(False)
+            self.btn_save.setEnabled(False)
+            self.btn_cancel.setEnabled(True)
+
+            # Switch to Sample Details tab
+            self.tabbed_pane.setSelectedIndex(0)
+
+            self.update_status("Sample duplicated - edit and save to create new sample")
+
+        except Exception as e:
+            MSG("Error duplicating sample: %s" % str(e))
 
     def _refresh_timeline(self):
         """Refresh timeline view"""
