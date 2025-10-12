@@ -5,10 +5,11 @@ Persistent Jython/Swing application for managing NMR sample metadata in TopSpin
 """
 
 from javax.swing import *
+from javax.swing.event import DocumentListener
 from javax.swing.table import DefaultTableModel, AbstractTableModel, DefaultTableCellRenderer
 from java.awt import *
 from java.awt.event import MouseAdapter, KeyEvent
-from javax.swing import AbstractAction, KeyStroke, JComponent
+from javax.swing import AbstractAction, KeyStroke, JComponent, DefaultListModel
 from java.lang import System
 import java.awt.event
 import sys
@@ -29,6 +30,8 @@ if lib_path not in sys.path:
 from sample_io import SampleIO
 from schema_form import SchemaFormGenerator
 from timeline import TimelineBuilder
+from config_manager import ConfigManager
+from sample_scanner import SampleScanner
 
 APP_KEY = "org.waudbylab.topspin-sample-manager"
 
@@ -56,6 +59,13 @@ class SampleManagerApp:
         self.is_draft = False  # Track if current form is an unsaved draft
         self.draft_data = None  # Store draft data for unsaved samples
 
+        # Configuration manager
+        config_file = os.path.join(script_dir, 'config.json')
+        self.config = ConfigManager(config_file)
+
+        # Sample scanner
+        self.sample_scanner = SampleScanner(self.sample_io)
+
         # GUI components
         self.frame = None
         self.status_label = None
@@ -76,6 +86,9 @@ class SampleManagerApp:
         self.selected_sample_filepath = None
         self.badge_label = None
         self.badge_detail_label = None
+        self.catalogue_table = None
+        self.catalogue_table_model = None
+        self.catalogue_search_field = None
 
         # Initialize
         self._create_gui()
@@ -139,7 +152,7 @@ class SampleManagerApp:
         list_panel = self._create_sample_list_panel()
         split_pane.setLeftComponent(list_panel)
 
-        # Right - tabbed pane with Sample Details and Timeline
+        # Right - tabbed pane with Sample Details, Timeline, and Samples
         self.tabbed_pane = JTabbedPane()
 
         # Tab 1: Sample Details
@@ -149,6 +162,13 @@ class SampleManagerApp:
         # Tab 2: Timeline
         timeline_view = self._create_timeline_view()
         self.tabbed_pane.addTab("Timeline", timeline_view)
+
+        # Tab 3: Sample Catalogue
+        catalogue_view = self._create_catalogue_view()
+        self.tabbed_pane.addTab("Sample Catalogue", catalogue_view)
+
+        # Add tab change listener to refresh catalogue when opened
+        self.tabbed_pane.addChangeListener(lambda e: self._on_tab_changed())
 
         split_pane.setRightComponent(self.tabbed_pane)
         container.add(split_pane, BorderLayout.CENTER)
@@ -342,6 +362,16 @@ class SampleManagerApp:
         self.btn_delete.setOpaque(True)
         row4.add(self.btn_delete)
 
+        # Fifth row: Settings
+        row5 = JPanel(GridLayout(1, 1, 0, 0))
+        btn_settings = JButton('Settings...')
+        btn_settings.setToolTipText("Configure search directories and preferences")
+        btn_settings.addActionListener(lambda e: self._show_settings())
+        # Light grey background for Settings
+        btn_settings.setBackground(Color(240, 240, 240))
+        btn_settings.setOpaque(True)
+        row5.add(btn_settings)
+
         panel.add(row1)
         panel.add(Box.createVerticalStrut(5))
         panel.add(row2)
@@ -349,6 +379,8 @@ class SampleManagerApp:
         panel.add(row3)
         panel.add(Box.createVerticalStrut(5))
         panel.add(row4)
+        panel.add(Box.createVerticalStrut(5))
+        panel.add(row5)
 
         return panel
 
@@ -425,6 +457,66 @@ class SampleManagerApp:
         self.timeline_table.addMouseListener(TimelineMouseListener(self))
 
         scroll_pane = JScrollPane(self.timeline_table)
+        panel.add(scroll_pane, BorderLayout.CENTER)
+
+        return panel
+
+    def _create_catalogue_view(self):
+        """Create catalogue view panel with searchable sample table"""
+        panel = JPanel(BorderLayout())
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10))
+
+        # Top panel with search bar and refresh button
+        top_panel = JPanel(BorderLayout())
+        top_panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0))
+
+        # Search panel on the left
+        search_panel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0))
+        search_label = JLabel("Search: ")
+        search_label.setFont(search_label.getFont().deriveFont(Font.PLAIN, 11.0))
+        search_panel.add(search_label)
+
+        self.catalogue_search_field = JTextField(30)
+        self.catalogue_search_field.setPreferredSize(Dimension(300, 26))
+        self.catalogue_search_field.getDocument().addDocumentListener(CatalogueSearchListener(self))
+        search_panel.add(self.catalogue_search_field)
+
+        top_panel.add(search_panel, BorderLayout.WEST)
+
+        # Refresh button on the right
+        btn_refresh = JButton('Refresh', actionPerformed=lambda e: self._refresh_catalogue())
+        top_panel.add(btn_refresh, BorderLayout.EAST)
+
+        panel.add(top_panel, BorderLayout.NORTH)
+
+        # Catalogue table
+        self.catalogue_table_model = CatalogueTableModel()
+        self.catalogue_table = JTable(self.catalogue_table_model)
+        self.catalogue_table.setRowHeight(26)
+        self.catalogue_table.setShowGrid(True)
+        self.catalogue_table.setGridColor(Color(230, 230, 230))
+        self.catalogue_table.setAutoCreateRowSorter(True)
+        self.catalogue_table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF)  # Allow horizontal scrolling
+
+        # Set column widths
+        col_model = self.catalogue_table.getColumnModel()
+        col_model.getColumn(0).setPreferredWidth(100)  # Created
+        col_model.getColumn(1).setPreferredWidth(200)  # Experiment
+        col_model.getColumn(2).setPreferredWidth(150)  # Label
+        col_model.getColumn(3).setPreferredWidth(250)  # Components
+        col_model.getColumn(4).setPreferredWidth(250)  # Buffer
+        col_model.getColumn(5).setPreferredWidth(120)  # Tube
+        col_model.getColumn(6).setPreferredWidth(200)  # Notes
+        col_model.getColumn(7).setPreferredWidth(120)  # Users
+
+        # Custom renderer for tooltips
+        self.catalogue_table.setDefaultRenderer(Object, CatalogueTableCellRenderer())
+
+        # Double-click listener to navigate to sample
+        self.catalogue_table.addMouseListener(CatalogueMouseListener(self))
+
+        scroll_pane = JScrollPane(self.catalogue_table)
+        scroll_pane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)
         panel.add(scroll_pane, BorderLayout.CENTER)
 
         return panel
@@ -1239,6 +1331,12 @@ if curdata:
         except Exception as e:
             MSG("Error saving sample: %s" % str(e))
 
+    def _show_settings(self):
+        """Show settings dialog"""
+        dialog = SettingsDialog(self.frame, self.config)
+        dialog.setLocationRelativeTo(self.frame)
+        dialog.setVisible(True)
+
     def _cancel_edit(self):
         """Cancel current edit"""
         # If form was modified or is draft, confirm cancellation
@@ -1283,6 +1381,90 @@ if curdata:
             self._show_placeholder()
 
         self.update_status("Cancelled")
+
+    def _on_tab_changed(self):
+        """Handle tab change - refresh catalogue when Samples tab is opened"""
+        if self.tabbed_pane.getSelectedIndex() == 2:  # Samples tab (index 2)
+            self._refresh_catalogue()
+            # If a sample is selected, find and select it in the catalogue
+            if self.selected_sample_filepath:
+                self._select_sample_in_catalogue(self.selected_sample_filepath)
+
+    def _refresh_catalogue(self):
+        """Refresh the sample catalogue"""
+        if not self.catalogue_table_model:
+            return
+
+        # Get search roots
+        roots = self.config.get_search_roots()
+
+        if not roots:
+            self.catalogue_table_model.clear_rows()
+            self.update_status("No search directories configured. Use Settings to add directories.")
+            return
+
+        self.update_status("Scanning directories for samples...")
+
+        # Scan directories for samples
+        try:
+            samples = self.sample_scanner.scan_roots(roots)
+            self.catalogue_table_model.set_rows(samples)
+            self.update_status("Found %d samples in %d directories" % (len(samples), len(roots)))
+        except Exception as e:
+            self.update_status("Error scanning directories: %s" % str(e))
+
+    def _select_sample_in_catalogue(self, filepath):
+        """Select a sample in the catalogue table by filepath
+
+        Args:
+            filepath: Full path to sample file
+        """
+        if not self.catalogue_table_model:
+            return
+
+        # Find the sample in the catalogue rows
+        for idx in range(self.catalogue_table_model.getRowCount()):
+            row_data = self.catalogue_table_model.get_row(idx)
+            if row_data and row_data.get('filepath') == filepath:
+                # Found it - select the row (accounting for sorting)
+                try:
+                    view_idx = self.catalogue_table.convertRowIndexToView(idx)
+                    self.catalogue_table.setRowSelectionInterval(view_idx, view_idx)
+                    self.catalogue_table.scrollRectToVisible(
+                        self.catalogue_table.getCellRect(view_idx, 0, True)
+                    )
+                except:
+                    # If conversion fails, just select by model index
+                    self.catalogue_table.setRowSelectionInterval(idx, idx)
+                    self.catalogue_table.scrollRectToVisible(
+                        self.catalogue_table.getCellRect(idx, 0, True)
+                    )
+                break
+
+    def handle_catalogue_double_click(self, sample_info):
+        """Handle double-click on catalogue entry - navigate to sample location
+
+        Args:
+            sample_info: Dictionary with sample information including 'directory' and 'filename'
+        """
+        directory = sample_info.get('directory')
+        filename = sample_info.get('filename')
+
+        if directory and filename:
+            # Navigate to the directory
+            self.set_directory(directory, auto_select=False)
+
+            # Find and select the sample in the list
+            sample_files = self.sample_io.list_sample_files(directory)
+            for idx, f in enumerate(sample_files):
+                if f == filename:
+                    self.sample_table.setRowSelectionInterval(idx, idx)
+                    self.sample_table.scrollRectToVisible(
+                        self.sample_table.getCellRect(idx, 0, True)
+                    )
+                    # Switch to Sample Details tab
+                    self.tabbed_pane.setSelectedIndex(0)
+                    break
 
     def _refresh_timeline(self):
         """Refresh timeline view"""
@@ -1776,6 +1958,463 @@ class CancelAction(AbstractAction):
 
     def actionPerformed(self, event):
         self.app._cancel_edit()
+
+
+class CatalogueTableModel(AbstractTableModel):
+    """Table model for sample catalogue"""
+
+    def __init__(self):
+        self.rows = []
+        self.all_rows = []  # Store all rows for filtering
+        self.column_names = ['Created', 'Experiment', 'Label', 'Components', 'Buffer', 'Tube', 'Notes', 'Users']
+
+    def getColumnCount(self):
+        return len(self.column_names)
+
+    def getRowCount(self):
+        return len(self.rows)
+
+    def getColumnName(self, col):
+        return self.column_names[col]
+
+    def getValueAt(self, row, col):
+        if row >= len(self.rows):
+            return None
+        row_data = self.rows[row]
+        if col == 0:
+            # Format timestamp - date only
+            created = row_data.get('created', '')
+            if created:
+                try:
+                    dt = datetime.strptime(created[:19], "%Y-%m-%dT%H:%M:%S")
+                    return dt.strftime("%Y-%m-%d")
+                except:
+                    return created[:10]
+            return ''
+        elif col == 1:
+            return row_data.get('experiment', '')
+        elif col == 2:
+            return row_data.get('label', '')
+        elif col == 3:
+            return row_data.get('components', '')
+        elif col == 4:
+            return row_data.get('buffer', '')
+        elif col == 5:
+            return row_data.get('tube', '')
+        elif col == 6:
+            return row_data.get('notes', '')
+        elif col == 7:
+            return row_data.get('users', '')
+        return None
+
+    def get_row(self, row):
+        """Get full row data"""
+        if row >= 0 and row < len(self.rows):
+            return self.rows[row]
+        return None
+
+    def set_rows(self, rows):
+        """Replace all rows"""
+        self.all_rows = rows
+        self.rows = rows
+        self.fireTableDataChanged()
+
+    def filter_rows(self, search_text):
+        """Filter rows based on search text (supports comma-separated terms)"""
+        if not search_text:
+            self.rows = self.all_rows
+        else:
+            # Split by comma and strip whitespace from each term
+            search_terms = [term.strip().lower() for term in search_text.split(',') if term.strip()]
+
+            self.rows = []
+            for row in self.all_rows:
+                # Search across all text fields
+                searchable = ' '.join([
+                    str(row.get('created', '')),
+                    str(row.get('experiment', '')),
+                    str(row.get('label', '')),
+                    str(row.get('users', '')),
+                    str(row.get('components', '')),
+                    str(row.get('buffer', '')),
+                    str(row.get('tube', '')),
+                    str(row.get('notes', ''))
+                ]).lower()
+
+                # Match if ALL terms are found (AND logic)
+                if all(term in searchable for term in search_terms):
+                    self.rows.append(row)
+
+        self.fireTableDataChanged()
+
+    def clear_rows(self):
+        """Clear all rows"""
+        self.rows = []
+        self.all_rows = []
+        self.fireTableDataChanged()
+
+
+class CatalogueTableCellRenderer(DefaultTableCellRenderer):
+    """Custom cell renderer for catalogue table with tooltips"""
+
+    def getTableCellRendererComponent(self, table, value, isSelected, hasFocus, row, column):
+        component = DefaultTableCellRenderer.getTableCellRendererComponent(
+            self, table, value, isSelected, hasFocus, row, column)
+
+        # Get actual row in model (in case table is sorted)
+        model_row = table.convertRowIndexToModel(row)
+        model = table.getModel()
+        row_data = model.get_row(model_row)
+
+        if row_data:
+            # Set tooltips based on column
+            col_name = model.getColumnName(column)
+
+            if col_name == 'Label':
+                tooltip = row_data.get('label_tooltip', '')
+                if tooltip:
+                    component.setToolTipText("<html>%s</html>" % tooltip.replace('\n', '<br>'))
+                else:
+                    component.setToolTipText(None)
+
+            elif col_name == 'Components':
+                tooltip = row_data.get('components_tooltip', '')
+                if tooltip:
+                    component.setToolTipText("<html>%s</html>" % tooltip.replace('\n', '<br>'))
+                else:
+                    component.setToolTipText(None)
+
+            elif col_name == 'Buffer':
+                tooltip = row_data.get('buffer_tooltip', '')
+                if tooltip:
+                    component.setToolTipText("<html>%s</html>" % tooltip.replace('\n', '<br>'))
+                else:
+                    component.setToolTipText(None)
+
+            elif col_name == 'Tube':
+                tooltip = row_data.get('tube_tooltip', '')
+                if tooltip:
+                    component.setToolTipText("<html>%s</html>" % tooltip.replace('\n', '<br>'))
+                else:
+                    component.setToolTipText(None)
+
+            elif col_name == 'Notes':
+                tooltip = row_data.get('notes_tooltip', '')
+                if tooltip:
+                    # Escape HTML and preserve newlines
+                    component.setToolTipText("<html>%s</html>" % tooltip.replace('\n', '<br>'))
+                else:
+                    component.setToolTipText(None)
+
+            else:
+                component.setToolTipText(None)
+
+        return component
+
+
+class CatalogueSearchListener(DocumentListener):
+    """Document listener for catalogue search field"""
+
+    def __init__(self, app):
+        self.app = app
+
+    def insertUpdate(self, event):
+        self._update_filter()
+
+    def removeUpdate(self, event):
+        self._update_filter()
+
+    def changedUpdate(self, event):
+        self._update_filter()
+
+    def _update_filter(self):
+        """Apply search filter"""
+        if self.app.catalogue_table_model and self.app.catalogue_search_field:
+            search_text = self.app.catalogue_search_field.getText().strip()
+            self.app.catalogue_table_model.filter_rows(search_text)
+
+
+class CatalogueMouseListener(MouseAdapter):
+    """Mouse listener for catalogue double-clicks and context menu"""
+
+    def __init__(self, app):
+        self.app = app
+
+    def mouseClicked(self, event):
+        if event.getClickCount() == 2:
+            table = event.getSource()
+            row = table.rowAtPoint(event.getPoint())
+            if row >= 0:
+                # Get actual row in model (in case table is sorted)
+                model_row = table.convertRowIndexToModel(row)
+                row_data = table.getModel().get_row(model_row)
+                if row_data:
+                    self.app.handle_catalogue_double_click(row_data)
+
+    def mousePressed(self, event):
+        self._handle_popup(event)
+
+    def mouseReleased(self, event):
+        self._handle_popup(event)
+
+    def _handle_popup(self, event):
+        """Handle right-click context menu"""
+        if event.isPopupTrigger():
+            table = event.getSource()
+            row = table.rowAtPoint(event.getPoint())
+
+            # Select row if not already selected
+            if row >= 0 and row != table.getSelectedRow():
+                table.setRowSelectionInterval(row, row)
+
+            if row >= 0:
+                # Get row data
+                model_row = table.convertRowIndexToModel(row)
+                row_data = table.getModel().get_row(model_row)
+
+                if row_data:
+                    # Create context menu
+                    popup = JPopupMenu()
+
+                    item_view = JMenuItem("View", actionPerformed=lambda e: self._view_sample(row_data))
+                    popup.add(item_view)
+
+                    item_edit = JMenuItem("Edit", actionPerformed=lambda e: self._edit_sample(row_data))
+                    popup.add(item_edit)
+
+                    item_duplicate = JMenuItem("Duplicate into current experiment", actionPerformed=lambda e: self._duplicate_sample(row_data))
+                    popup.add(item_duplicate)
+
+                    popup.show(event.getComponent(), event.getX(), event.getY())
+
+    def _view_sample(self, sample_info):
+        """Navigate to sample and view it (read-only)"""
+        self.app.handle_catalogue_double_click(sample_info)
+
+    def _edit_sample(self, sample_info):
+        """Navigate to sample and edit it"""
+        # First navigate to the sample
+        directory = sample_info.get('directory')
+        filename = sample_info.get('filename')
+
+        if directory and filename:
+            # Navigate to the directory
+            self.app.set_directory(directory, auto_select=False)
+
+            # Find and select the sample in the list
+            sample_files = self.app.sample_io.list_sample_files(directory)
+            for idx, f in enumerate(sample_files):
+                if f == filename:
+                    self.app.current_sample_file = filename
+                    self.app.sample_table.setRowSelectionInterval(idx, idx)
+                    # Trigger edit mode
+                    self.app._edit_sample()
+                    break
+
+    def _duplicate_sample(self, sample_info):
+        """Duplicate sample into current directory"""
+        # Load the sample data from its original location
+        filepath = sample_info.get('filepath')
+        if not filepath:
+            return
+
+        # Check if we have a current directory
+        if not self.app.current_directory:
+            MSG("Please navigate to a directory first")
+            return
+
+        try:
+            # Read the sample data
+            data = self.app.sample_io.read_sample(filepath)
+
+            # Append "(copy)" to label
+            if 'Sample' in data and 'Label' in data['Sample']:
+                data['Sample']['Label'] = data['Sample']['Label'] + " (copy)"
+
+            # Remove metadata timestamps - will be regenerated with current schema
+            if 'Metadata' in data:
+                data['Metadata'].pop('created_timestamp', None)
+                data['Metadata'].pop('modified_timestamp', None)
+                data['Metadata'].pop('ejected_timestamp', None)
+                data['Metadata'].pop('schema_version', None)
+
+            # Check if active sample exists and prompt to eject
+            active = self.app._get_active_sample()
+            if active:
+                result = JOptionPane.showConfirmDialog(
+                    self.app.frame,
+                    "Active sample '%s' is currently loaded.\nEject it and duplicate selected sample?" % active['label'],
+                    "Eject Active Sample",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+                )
+                if result != JOptionPane.YES_OPTION:
+                    return
+
+                # Eject the active sample
+                self.app.sample_io.eject_sample(active['filepath'])
+                self.app._refresh_sample_list()
+                self.app._refresh_timeline()
+
+            # Set draft state
+            self.app.current_sample_file = None
+            self.app.is_draft = True
+            self.app.draft_data = data
+            self.app.form_modified = False
+
+            # Update badge and refresh sample list to show draft
+            self.app._update_badge()
+            self.app._refresh_sample_list()
+
+            # Create fresh form generator using CURRENT schema for duplicates
+            self.app.form_generator = SchemaFormGenerator(self.app.current_schema_path)
+
+            # Create form first
+            self.app.form_panel.removeAll()
+            form_scroll = self.app.form_generator.create_form_panel(self.app)
+            self.app.form_panel.add(form_scroll, BorderLayout.CENTER)
+
+            # Then load data
+            self.app.form_generator.load_data(data)
+
+            self.app.form_panel.revalidate()
+            self.app.form_panel.repaint()
+
+            # Set button states
+            self.app.btn_save.setEnabled(False)
+            self.app.btn_cancel.setEnabled(True)
+
+            self.app.tabbed_pane.setSelectedIndex(0)  # Switch to Sample Details tab
+            self.app.update_status("Duplicating sample into current directory (draft)")
+
+        except Exception as e:
+            MSG("Error duplicating sample: %s" % str(e))
+
+
+class SettingsDialog(JDialog):
+    """Settings dialog for configuring search directories"""
+
+    def __init__(self, parent, config):
+        JDialog.__init__(self, parent, "Settings", True)
+        self.config = config
+        self.setSize(600, 400)
+
+        # Store initial state for cancel functionality
+        self.initial_roots = list(config.get_search_roots())
+
+        # Main container
+        container = self.getContentPane()
+        container.setLayout(BorderLayout(10, 10))
+
+        # Title panel
+        title_panel = JPanel(FlowLayout(FlowLayout.LEFT))
+        title_label = JLabel("Search Root Directories")
+        title_label.setFont(title_label.getFont().deriveFont(Font.BOLD, 14.0))
+        title_panel.add(title_label)
+        container.add(title_panel, BorderLayout.NORTH)
+
+        # Center panel - directory list
+        center_panel = JPanel(BorderLayout(5, 5))
+        center_panel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10))
+
+        # Info label
+        info_label = JLabel("<html>These directories will be searched for samples.<br>" +
+                           "Subdirectories will be searched recursively.</html>")
+        info_label.setFont(info_label.getFont().deriveFont(Font.PLAIN, 11.0))
+        info_label.setForeground(Color(100, 100, 100))
+        center_panel.add(info_label, BorderLayout.NORTH)
+
+        # List of directories
+        self.list_model = DefaultListModel()
+        for root in self.initial_roots:
+            self.list_model.addElement(root)
+
+        self.directory_list = JList(self.list_model)
+        self.directory_list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
+        scroll = JScrollPane(self.directory_list)
+        center_panel.add(scroll, BorderLayout.CENTER)
+
+        # Buttons to add/remove directories
+        list_button_panel = JPanel(FlowLayout(FlowLayout.LEFT))
+        btn_add = JButton('Add...', actionPerformed=lambda e: self._add_directory())
+        btn_remove = JButton('Remove', actionPerformed=lambda e: self._remove_directory())
+        list_button_panel.add(btn_add)
+        list_button_panel.add(btn_remove)
+        center_panel.add(list_button_panel, BorderLayout.SOUTH)
+
+        container.add(center_panel, BorderLayout.CENTER)
+
+        # Bottom panel - OK/Cancel buttons
+        bottom_panel = JPanel(FlowLayout(FlowLayout.RIGHT))
+        bottom_panel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10))
+
+        btn_cancel = JButton('Cancel', actionPerformed=lambda e: self._cancel())
+        btn_ok = JButton('OK', actionPerformed=lambda e: self._save())
+        btn_ok.setPreferredSize(Dimension(80, 28))
+        btn_cancel.setPreferredSize(Dimension(80, 28))
+
+        # Make OK button visually primary
+        btn_ok.setFont(btn_ok.getFont().deriveFont(Font.BOLD))
+        btn_ok.setBackground(Color(200, 230, 200))
+        btn_ok.setOpaque(True)
+
+        bottom_panel.add(btn_cancel)
+        bottom_panel.add(btn_ok)
+
+        container.add(bottom_panel, BorderLayout.SOUTH)
+
+    def _add_directory(self):
+        """Add a directory to the search roots"""
+        chooser = JFileChooser()
+        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY)
+        chooser.setDialogTitle("Select Search Root Directory")
+
+        if chooser.showOpenDialog(self) == JFileChooser.APPROVE_OPTION:
+            path = chooser.getSelectedFile().getAbsolutePath()
+
+            # Check if already in list
+            for i in range(self.list_model.getSize()):
+                if self.list_model.getElementAt(i) == path:
+                    JOptionPane.showMessageDialog(
+                        self,
+                        "This directory is already in the list.",
+                        "Duplicate Directory",
+                        JOptionPane.WARNING_MESSAGE
+                    )
+                    return
+
+            self.list_model.addElement(path)
+
+    def _remove_directory(self):
+        """Remove selected directory from the list"""
+        selected_idx = self.directory_list.getSelectedIndex()
+        if selected_idx >= 0:
+            self.list_model.removeElementAt(selected_idx)
+        else:
+            JOptionPane.showMessageDialog(
+                self,
+                "Please select a directory to remove.",
+                "No Selection",
+                JOptionPane.INFORMATION_MESSAGE
+            )
+
+    def _save(self):
+        """Save changes and close"""
+        # Get all directories from list model
+        roots = []
+        for i in range(self.list_model.getSize()):
+            roots.append(self.list_model.getElementAt(i))
+
+        # Save to config
+        self.config.set_search_roots(roots)
+
+        self.dispose()
+
+    def _cancel(self):
+        """Cancel changes and close"""
+        # Restore original roots
+        self.config.set_search_roots(self.initial_roots)
+        self.dispose()
 
 
 def get_app():
