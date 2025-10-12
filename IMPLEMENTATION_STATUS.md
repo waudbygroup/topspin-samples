@@ -57,7 +57,11 @@ src/
 ├── aij.py              # Auto-inject command
 ├── aej.py              # Auto-eject command
 ├── schemas/
-│   └── current.json    # JSON schema (from web app)
+│   ├── current/
+│   │   └── schema.json    # Active JSON schema
+│   └── versions/
+│       └── v0.0.1/
+│           └── schema.json # Versioned schemas
 └── lib/
     ├── sample_io.py    # JSON file operations
     ├── schema_form.py  # Schema -> Swing form generator
@@ -92,6 +96,8 @@ src/
 - ✓ External command support (aij, aej)
 - ✓ Auto-navigation to current dataset
 - ✓ Directory browsing
+- ✓ Schema versioning support with graceful error handling
+- ✓ GitHub Actions workflow for automatic schema syncing
 
 ## Testing Checklist
 
@@ -132,6 +138,15 @@ Before using in production, test the following:
 - [ ] Metadata timestamps correct (created, modified, ejected)
 - [ ] Schema version recorded
 - [ ] Files readable by web app (compatibility check)
+
+## Recent Improvements
+
+### Schema Management (2025-10)
+- ✓ Refactored schema storage to versioned directory structure
+- ✓ Added GitHub Actions workflow for automatic schema syncing
+- ✓ Implemented graceful error handling for missing schema versions
+- ✓ User-friendly error panel when schema version not found
+- ✓ Clear guidance to update installation when schemas missing
 
 ## Known Limitations / TODO
 
@@ -188,10 +203,13 @@ Before using in production, test the following:
    /opt/topspin4.4.0/exp/stan/nmr/py/user/sample-manager/
    ```
 
-2. Ensure schema file exists:
+2. Ensure schema files exist:
    ```
-   src/schemas/current/schema.json
+   src/schemas/current/schema.json         # Active schema
+   src/schemas/versions/v0.0.1/schema.json # Version 0.0.1
    ```
+
+   Note: The GitHub Actions workflow will automatically sync schema updates from the schema repository.
 
 3. Run from TopSpin command line:
    ```

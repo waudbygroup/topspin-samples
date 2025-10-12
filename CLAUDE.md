@@ -684,9 +684,39 @@ import os    # File system operations
 ### Phase 6: Polish - IN PROGRESS
 - [x] Error handling and user feedback
 - [x] Status bar with current directory
+- [x] Schema versioning with graceful error handling
+- [x] GitHub Actions workflow for schema syncing
 - [ ] Keyboard shortcuts
 - [ ] Help/documentation
 - [ ] Real-world testing in TopSpin environment
+
+## Schema Version Management
+
+### Directory Structure
+Schemas are organized in a versioned directory structure:
+- `schemas/current/schema.json` - The active schema used for new samples
+- `schemas/versions/v{version}/schema.json` - Historical schema versions
+
+This structure enables:
+- **Independent schema repository** - Schemas maintained separately and synced via GitHub Actions
+- **Version compatibility** - Old samples can be viewed/edited with their original schema
+- **Automatic updates** - GitHub workflow pulls schema changes nightly
+
+### Error Handling for Missing Schemas
+When a sample requires a schema version that doesn't exist locally:
+
+1. **Detection** - `_get_schema_path_for_version()` returns `None` if schema not found
+2. **User notification** - Display user-friendly error panel in form area showing:
+   - Schema version required
+   - Expected file location
+   - Instructions to update installation
+3. **Graceful degradation** - App remains functional, user can navigate to other samples
+4. **No crashes** - No exceptions thrown that would hang the entire application
+
+This approach ensures that:
+- Users understand what's wrong and how to fix it
+- Missing schemas don't cause application crashes
+- Clear path to resolution (update installation)
 
 ## Key Design Decisions
 
@@ -721,7 +751,8 @@ User workflow:
 3. **Timeline** - Mix of samples and experiments, proper chronological ordering
 4. **State persistence** - Close/reopen app, verify state maintained
 5. **Auto-eject** - Creating new sample properly ejects previous active
-6. **Edge cases** - Empty directories, missing acqus files, malformed JSON
+6. **Schema versioning** - Test missing schema versions show error panel gracefully
+7. **Edge cases** - Empty directories, missing acqus files, malformed JSON
 
 ## Reference Materials
 
