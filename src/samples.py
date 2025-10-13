@@ -593,11 +593,48 @@ class SampleManagerApp:
 
     def _create_status_panel(self):
         """Create bottom status panel"""
-        panel = JPanel(FlowLayout(FlowLayout.LEFT))
-        panel.add(JLabel("Status:"))
+        panel = JPanel(BorderLayout())
 
+        # Left side - status
+        left_panel = JPanel(FlowLayout(FlowLayout.LEFT))
+        left_panel.add(JLabel("Status:"))
         self.status_label = JLabel("Ready")
-        panel.add(self.status_label)
+        left_panel.add(self.status_label)
+        panel.add(left_panel, BorderLayout.WEST)
+
+        # Right side - repository link
+        right_panel = JPanel(FlowLayout(FlowLayout.RIGHT))
+        repo_link = JLabel("<html><a href=''>View on GitHub</a></html>")
+        repo_link.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
+        repo_link.setToolTipText("https://github.com/waudbygroup/topspin-samples")
+
+        # Add click listener to open URL
+        def open_repo(event):
+            try:
+                import java.awt.Desktop as Desktop
+                import java.net.URI as URI
+                if Desktop.isDesktopSupported():
+                    desktop = Desktop.getDesktop()
+                    if desktop.isSupported(Desktop.Action.BROWSE):
+                        desktop.browse(URI("https://github.com/waudbygroup/topspin-samples"))
+            except Exception as e:
+                MSG("Could not open browser: %s" % str(e))
+
+        # MouseAdapter is an abstract Java class; instantiate a concrete
+        # subclass that implements mouseClicked and forwards to our handler.
+        class RepoMouseAdapter(java.awt.event.MouseAdapter):
+            def __init__(self, handler):
+                self._handler = handler
+
+            def mouseClicked(self, event):
+                try:
+                    self._handler(event)
+                except Exception as e:
+                    MSG("Could not open browser: %s" % str(e))
+
+        repo_link.addMouseListener(RepoMouseAdapter(open_repo))
+        right_panel.add(repo_link)
+        panel.add(right_panel, BorderLayout.EAST)
 
         return panel
 

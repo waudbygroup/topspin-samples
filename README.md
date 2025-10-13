@@ -13,6 +13,10 @@ NMR workflows focus on data acquisition and processing, but sample tracking has 
 
 This tool provides a simple JSON schema for recording sample metadata, creating a lightweight, parallel system that captures sample information alongside TopSpin workflows.
 
+### Related Repository
+
+The JSON schema used by this tool is maintained separately in the [nmr-sample-schema](https://github.com/waudbygroup/nmr-sample-schema) repository. This allows the schema to be used independently in other applications and tools.
+
 ## Features
 
 - **TopSpin Integration**: Runs natively within TopSpin's Jython environment
