@@ -28,16 +28,16 @@ This tool provides a simple JSON schema for recording sample metadata, creating 
 1. Clone this repository to a suitable directory (N.B. you cannot use locations within `/opt/topspin...`):
    ```bash
    cd /path/to/installation/directory/
-   git clone https://github.com/waudbygroup/sample-manager.git
+   git clone https://github.com/waudbygroup/topspin-samples.git
    ```
 
-2. Use `setres` in Topspin and add the `src` directory within the sample-manager folder to the python paths.
+2. Use `setres` in Topspin and add the `src` directory within the topspin-samples folder to the python paths.
 
 3. The application will now be available as TopSpin Python commands.
 
-4. To update the app, open a terminal and navigate to the sample-manager folder, then pull any updates:
+4. To update the app, open a terminal and navigate to the topspin-samples folder, then pull any updates:
    ```bash
-   cd /path/to/installation/directory/sample-manager
+   cd /path/to/installation/directory/topspin-samples
    git pull
    ```
 
@@ -67,7 +67,7 @@ This tool provides a simple JSON schema for recording sample metadata, creating 
 - **New...** - Create new sample (auto-ejects previous active sample)
 - **Duplicate...** - Copy existing sample as template
 - **Edit** - Modify sample metadata (read-only view by default, edit on double-click)
-- **Eject** - Mark active sample as ejected (only enabled for active samples)
+- **Mark as Ejected** - Mark active sample as ejected (only enabled for active samples)
 - **Delete** - Remove ejected samples (disabled for active samples)
 
 #### Status Badge
@@ -128,7 +128,7 @@ Sample metadata is stored as human-readable JSON files:
   },
   "Notes": "Sample prepared for HSQC experiments",
   "Metadata": {
-    "schema_version": "0.0.2",
+    "schema_version": "0.0.3",
     "created_timestamp": "2025-10-09T14:30:22.000Z",
     "modified_timestamp": "2025-10-09T14:35:10.000Z",
     "ejected_timestamp": "2025-10-09T16:45:00.000Z"
@@ -138,9 +138,9 @@ Sample metadata is stored as human-readable JSON files:
 
 ### Schema Versioning
 
-- Current version: **0.0.2**
-- Schemas stored in `src/schemas/`
-- `current.json` symlink points to active schema
+- Current version: **0.0.3**
+- Schemas stored in `src/schemas/versions/`
+- `src/schemas/current/schema.json` points to active schema
 - Old samples automatically load with their original schema version
 - New/duplicated samples use current schema version
 
@@ -159,9 +159,6 @@ Sample metadata is stored as human-readable JSON files:
 - `samples.py` - Main GUI application
 - `ija.py` - Inject-and-Annotate command
 - `eja.py` - Eject-and-Annotate command
-- `lib/schema_form.py` - Dynamic form generation from JSON Schema
-- `lib/sample_io.py` - JSON file I/O with timestamping
-- `lib/timeline.py` - Timeline construction from samples and acqus files
 
 ### Singleton Pattern
 
@@ -175,7 +172,7 @@ The application uses Java System Properties to maintain a single persistent inst
 ### Project Structure
 
 ```
-sample-manager/
+topspin-samples/
 ├── src/
 │   ├── samples.py           # Main GUI application
 │   ├── ija.py               # Inject command
@@ -186,11 +183,13 @@ sample-manager/
 │   │   └── timeline.py      # Timeline logic
 │   └── schemas/
 │       ├── current/
-│       │   └── schema.json  # Active schema
+│       │   └── schema.json  # Active schema (v0.0.3)
 │       └── versions/
 │           ├── v0.0.1/
 │           │   └── schema.json
-│           └── v0.0.2/
+│           ├── v0.0.2/
+│           │   └── schema.json
+│           └── v0.0.3/
 │               └── schema.json
 ├── CLAUDE.md                # Development documentation
 ├── README.md                # This file
