@@ -115,7 +115,7 @@ class SampleScanner:
             with open(filepath, 'r') as f:
                 data = json.load(f)
                 # Check if it has the expected structure
-                return 'Metadata' in data and 'Sample' in data
+                return 'metadata' in data and 'sample' in data
         except:
             return False
 
@@ -132,27 +132,37 @@ class SampleScanner:
             data = self.sample_io.read_sample(filepath)
 
             # Extract creation date
-            created = data.get('Metadata', {}).get('created_timestamp', '')
+            created = data.get('metadata', {}).get('created_timestamp', '')
 
             # Extract label
-            label = data.get('Sample', {}).get('Label', '')
+            label = data.get('sample', {}).get('label', '')
 
-            # Extract users
-            users = data.get('Users', [])
+            # Extract users and groups
+            people = data.get('people', {})
+            users = people.get('users', [])
+            groups = people.get('groups', [])
             users_str = ', '.join(users) if users else ''
 
+            # Build users tooltip with groups
+            users_tooltip_parts = []
+            if users:
+                users_tooltip_parts.append("Users: %s" % ', '.join(users))
+            if groups:
+                users_tooltip_parts.append("Groups: %s" % ', '.join(groups))
+            users_tooltip = '\n'.join(users_tooltip_parts) if users_tooltip_parts else ''
+
             # Extract sample components with labelling
-            components = data.get('Sample', {}).get('Components', [])
+            components = data.get('sample', {}).get('components', [])
             component_strs = []
             component_details = []
             for comp in components:
-                if isinstance(comp, dict) and 'Name' in comp:
-                    name = comp['Name']
-                    labelling = comp.get('Isotopic labelling', '')
+                if isinstance(comp, dict) and 'name' in comp:
+                    name = comp['name']
+                    labelling = comp.get('isotopic_labelling', '')
 
                     # Build display string
                     if labelling == 'custom':
-                        custom = comp.get('Custom labelling', '')
+                        custom = comp.get('custom_labelling', '')
                         if custom:
                             component_strs.append("%s (%s)" % (name, custom))
                         else:
@@ -163,8 +173,8 @@ class SampleScanner:
                         component_strs.append(name)
 
                     # Build tooltip detail string
-                    conc = comp.get('Concentration', '')
-                    unit = comp.get('Unit', '')
+                    conc = comp.get('concentration', '')
+                    unit = comp.get('unit', '')
                     if conc and unit:
                         detail = "%s: %s %s" % (name, conc, unit)
                     else:
@@ -177,8 +187,8 @@ class SampleScanner:
             components_tooltip = '\n'.join(component_details) if component_details else ''
 
             # Extract buffer components, solvent, and pH
-            buffer_data = data.get('Buffer', {})
-            buffer_components = buffer_data.get('Components', [])
+            buffer_data = data.get('buffer', {})
+            buffer_components = buffer_data.get('components', [])
             buffer_parts = []
             buffer_details = []
 
@@ -188,17 +198,17 @@ class SampleScanner:
                     buffer_parts.append(name)
 
                     # Build tooltip detail
-                    conc = comp.get('Concentration', '')
-                    unit = comp.get('Unit', '')
+                    conc = comp.get('concentration', '')
+                    unit = comp.get('unit', '')
                     if conc and unit:
                         buffer_details.append("%s: %s %s" % (name, conc, unit))
                     else:
                         buffer_details.append(name)
 
             # Add solvent
-            solvent = buffer_data.get('Solvent', '')
+            solvent = buffer_data.get('solvent', '')
             if solvent == 'custom':
-                custom_solvent = buffer_data.get('Custom solvent', '')
+                custom_solvent = buffer_data.get('custom_solvent', '')
                 if custom_solvent:
                     buffer_parts.append(custom_solvent)
                     buffer_details.append("Solvent: %s" % custom_solvent)
@@ -213,10 +223,10 @@ class SampleScanner:
                 buffer_details.append("pH: %s" % ph)
 
             # Add chemical shift reference
-            ref = buffer_data.get('Chemical shift reference', '')
+            ref = buffer_data.get('chemical_shift_reference', '')
             if ref and ref != 'none':
-                ref_conc = buffer_data.get('Reference concentration', '')
-                ref_unit = buffer_data.get('Reference unit', '')
+                ref_conc = buffer_data.get('reference_concentration', '')
+                ref_unit = buffer_data.get('reference_unit', '')
                 if ref_conc and ref_unit:
                     buffer_details.append("Reference: %s (%s %s)" % (ref, ref_conc, ref_unit))
                 else:
@@ -226,9 +236,9 @@ class SampleScanner:
             buffer_tooltip = '\n'.join(buffer_details) if buffer_details else ''
 
             # Extract NMR tube information
-            tube_data = data.get('NMR Tube', {})
-            diameter = tube_data.get('Diameter', '')
-            tube_type = tube_data.get('Type', '')
+            tube_data = data.get('nmr_tube', {})
+            diameter = tube_data.get('diameter', '')
+            tube_type = tube_data.get('type', '')
             tube_parts = []
             if diameter:
                 tube_parts.append(diameter)
@@ -242,19 +252,19 @@ class SampleScanner:
                 tube_details.append("Diameter: %s" % diameter)
             if tube_type:
                 tube_details.append("Type: %s" % tube_type)
-            volume = tube_data.get('Sample Volume (μL)', '')
+            volume = tube_data.get('sample_volume_uL', '')
             if volume:
-                tube_details.append("Volume: %s μL" % volume)
-            sj_pos = tube_data.get('SampleJet Rack Position', '')
+                tube_details.append("Volume: %s uL" % volume)
+            sj_pos = tube_data.get('samplejet_rack_position', '')
             if sj_pos:
                 tube_details.append("SampleJet Position: %s" % sj_pos)
-            sj_rack = tube_data.get('SampleJet Rack ID', '')
+            sj_rack = tube_data.get('samplejet_rack_id', '')
             if sj_rack:
                 tube_details.append("SampleJet Rack: %s" % sj_rack)
             tube_tooltip = '\n'.join(tube_details) if tube_details else ''
 
             # Extract notes (first line for display)
-            notes = data.get('Notes', '')
+            notes = data.get('notes', '')
             notes_first_line = ''
             notes_tooltip = notes
             if notes:
@@ -264,14 +274,14 @@ class SampleScanner:
                     notes_first_line += '...'
 
             # Extract lab reference for tooltip
-            lab_ref = data.get('Laboratory Reference', {})
-            labbook = lab_ref.get('Labbook Entry', '')
-            exp_id = lab_ref.get('Experiment ID', '')
+            lab_ref = data.get('reference', {})
+            sample_id = lab_ref.get('sample_id', '')
+            labbook = lab_ref.get('labbook_entry', '')
             label_details = []
+            if sample_id:
+                label_details.append("Sample ID: %s" % sample_id)
             if labbook:
                 label_details.append("Labbook: %s" % labbook)
-            if exp_id:
-                label_details.append("Experiment ID: %s" % exp_id)
             label_tooltip = '\n'.join(label_details) if label_details else ''
 
             # Get directory (parent of sample file) and extract experiment folder name
@@ -286,6 +296,7 @@ class SampleScanner:
                 'label': label,
                 'label_tooltip': label_tooltip,
                 'users': users_str,
+                'users_tooltip': users_tooltip,
                 'components': components_str,
                 'components_tooltip': components_tooltip,
                 'buffer': buffer_str,
@@ -294,9 +305,13 @@ class SampleScanner:
                 'tube_tooltip': tube_tooltip,
                 'notes': notes_first_line,
                 'notes_tooltip': notes_tooltip,
-                'experiment': experiment_folder
+                'experiment': experiment_folder,
+                'experiment_tooltip': directory
             }
 
         except Exception as e:
             # Error reading/parsing file - skip it
+            # Debug: print error to help troubleshoot
+            import sys
+            print >> sys.stderr, "Error parsing %s: %s" % (filepath, str(e))
             return None

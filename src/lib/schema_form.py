@@ -50,8 +50,8 @@ class SchemaFormGenerator:
         # Note: In Python 2.7+ dicts maintain insertion order in CPython,
         # but JSON parsing should preserve order from file
         for prop_name, prop_schema in properties.items():
-            # Handle Metadata section as read-only
-            if prop_name == 'Metadata':
+            # Handle metadata section as read-only
+            if prop_name == 'metadata':
                 section_panel = self._create_metadata_section(prop_name, prop_schema)
             else:
                 section_panel = self._create_section(prop_name, prop_schema)
@@ -78,9 +78,11 @@ class SchemaFormGenerator:
         section_panel.setLayout(BoxLayout(section_panel, BoxLayout.Y_AXIS))
 
         # Create titled border with bold font
+        # Use title from schema if available, otherwise use section_name
+        section_title = section_schema.get('title', section_name)
         titled_border = BorderFactory.createTitledBorder(
             BorderFactory.createEtchedBorder(),
-            section_name + " (read-only)",
+            section_title + " (read-only)",
             0,  # TitledBorder.DEFAULT_JUSTIFICATION
             0,  # TitledBorder.DEFAULT_POSITION
             Font("Dialog", Font.BOLD, 12)
@@ -101,8 +103,9 @@ class SchemaFormGenerator:
             gbc.insets = Insets(5, 10, 5, 10)
             gbc.anchor = GridBagConstraints.WEST
 
-            # Label
-            jlabel = JLabel("%s:" % prop_name)
+            # Label - use title from schema if available, otherwise use prop_name
+            label_text = prop_schema.get('title', prop_name)
+            jlabel = JLabel("%s:" % label_text)
             jlabel.setFont(jlabel.getFont().deriveFont(11.0))
             description = prop_schema.get('description', '')
             if description:
@@ -143,9 +146,11 @@ class SchemaFormGenerator:
         section_panel.setLayout(BoxLayout(section_panel, BoxLayout.Y_AXIS))
 
         # Create titled border with bold font
+        # Use title from schema if available, otherwise use section_name
+        section_title = section_schema.get('title', section_name)
         titled_border = BorderFactory.createTitledBorder(
             BorderFactory.createEtchedBorder(),
-            section_name,
+            section_title,
             0,  # TitledBorder.DEFAULT_JUSTIFICATION
             0,  # TitledBorder.DEFAULT_POSITION
             Font("Dialog", Font.BOLD, 12)
@@ -198,7 +203,9 @@ class SchemaFormGenerator:
         gbc.anchor = GridBagConstraints.WEST
 
         # Create label with tooltip if description exists
-        jlabel = JLabel("%s:" % label)
+        # Use title from schema if available, otherwise use label parameter
+        label_text = field_schema.get('title', label)
+        jlabel = JLabel("%s:" % label_text)
         jlabel.setFont(jlabel.getFont().deriveFont(11.0))
         if description:
             jlabel.setToolTipText(description)
@@ -220,8 +227,14 @@ class SchemaFormGenerator:
             if description:
                 component.setToolTipText(description)
         elif field_type == 'array':
-            # Array field with add/remove buttons
-            component = self._create_array_field(field_path, field_schema)
+            # Check if it's a simple string array (use text field) or complex array (use add/remove buttons)
+            items_schema = field_schema.get('items', {})
+            if items_schema.get('type') == 'string':
+                # Simple string array - use comma-separated text field
+                component = self._create_string_array_field(field_path, field_schema)
+            else:
+                # Complex array (objects) - use add/remove buttons
+                component = self._create_array_field(field_path, field_schema)
         elif field_type == 'number' or field_type == ['number', 'null']:
             # Number input with tooltip
             component = JTextField()
@@ -421,7 +434,9 @@ class SchemaFormGenerator:
             description = prop_schema.get('description', '')
 
             field_panel = JPanel(FlowLayout(FlowLayout.LEFT))
-            label = JLabel("%s:" % prop_name)
+            # Use title from schema if available, otherwise use prop_name
+            label_text = prop_schema.get('title', prop_name)
+            label = JLabel("%s:" % label_text)
             if description:
                 label.setToolTipText(description)
             field_panel.add(label)
@@ -558,7 +573,9 @@ class SchemaFormGenerator:
                     description = prop_schema.get('description', '')
 
                     field_panel = JPanel(FlowLayout(FlowLayout.LEFT))
-                    label = JLabel("%s:" % prop_name)
+                    # Use title from schema if available, otherwise use prop_name
+                    label_text = prop_schema.get('title', prop_name)
+                    label = JLabel("%s:" % label_text)
                     if description:
                         label.setToolTipText(description)
                     field_panel.add(label)
@@ -690,6 +707,9 @@ class SchemaFormGenerator:
         for key in keys:
             if key in schema_obj:
                 schema_obj = schema_obj[key]
+                # If this is an object type, move into its properties for the next key
+                if isinstance(schema_obj, dict) and schema_obj.get('type') == 'object':
+                    schema_obj = schema_obj.get('properties', {})
             else:
                 return False
 

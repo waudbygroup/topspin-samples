@@ -95,10 +95,10 @@ class TimelineBuilder:
 
             try:
                 data = self.sample_io.read_sample(filepath)
-                metadata = data.get('Metadata', {})
+                metadata = data.get('metadata', {})
 
                 # Get sample label
-                sample_label = data.get('Sample', {}).get('Label', 'Unknown')
+                sample_label = data.get('sample', {}).get('label', 'Unknown')
                 if not sample_label:
                     # Fall back to filename
                     _, label = self.sample_io.parse_filename(filename)

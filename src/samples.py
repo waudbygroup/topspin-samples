@@ -346,9 +346,9 @@ class SampleManagerApp:
         self.btn_edit.setOpaque(True)
         row2.add(self.btn_edit)
 
-        # Third row: Eject
+        # Third row: Mark as ejected
         row3 = JPanel(GridLayout(1, 1, 0, 0))
-        self.btn_eject = JButton('Eject')
+        self.btn_eject = JButton('Mark as ejected')
         self.btn_eject.setToolTipText("Mark active sample as ejected")
         self.btn_eject.addActionListener(lambda e: self._eject_active_sample())
         # Yellow/amber background for Eject (warning)
@@ -795,8 +795,8 @@ if curdata:
                         'filename': filename,
                         'filepath': filepath,
                         'data': data,
-                        'label': data.get('Sample', {}).get('Label', filename),
-                        'created': data.get('Metadata', {}).get('created_timestamp', '')
+                        'label': data.get('sample', {}).get('label', filename),
+                        'created': data.get('metadata', {}).get('created_timestamp', '')
                     }
         except:
             pass
@@ -808,7 +808,7 @@ if curdata:
             # Draft state - unsaved sample
             sample_label = "New Sample"
             if self.draft_data:
-                sample_label = self.draft_data.get('Sample', {}).get('Label', 'New Sample')
+                sample_label = self.draft_data.get('sample', {}).get('label', 'New Sample')
 
             self.badge_label.setText("DRAFT  " + sample_label)
             self.badge_label.setBackground(Color(218, 165, 32))  # Amber/gold
@@ -861,11 +861,11 @@ if curdata:
                         for filename in sample_files:
                             filepath = os.path.join(self.current_directory, filename)
                             data = self.sample_io.read_sample(filepath)
-                            ejected = data.get('Metadata', {}).get('ejected_timestamp')
+                            ejected = data.get('metadata', {}).get('ejected_timestamp')
                             if ejected:
                                 if last_time is None or ejected > last_time:
                                     last_time = ejected
-                                    last_ejected = data.get('Sample', {}).get('Label', filename)
+                                    last_ejected = data.get('sample', {}).get('label', filename)
 
                         if last_ejected:
                             self.badge_detail_label.setText("Last: " + last_ejected)
@@ -896,9 +896,9 @@ if curdata:
                 # Load sample to get label and other info for tooltip
                 try:
                     data = self.sample_io.read_sample(filepath)
-                    label = data.get('Sample', {}).get('Label', filename)
-                    created = data.get('Metadata', {}).get('created_timestamp', '')
-                    users = data.get('Users', [])
+                    label = data.get('sample', {}).get('label', filename)
+                    created = data.get('metadata', {}).get('created_timestamp', '')
+                    users = data.get('people', {}).get('users', [])
                 except:
                     label = filename
                     created = ''
@@ -918,7 +918,7 @@ if curdata:
             if self.is_draft:
                 draft_label = "<new sample>"
                 if self.draft_data:
-                    sample_label = self.draft_data.get('Sample', {}).get('Label', '')
+                    sample_label = self.draft_data.get('sample', {}).get('label', '')
                     if sample_label:
                         # Check if it's a copy
                         if sample_label.endswith(' (copy)'):
@@ -1061,7 +1061,7 @@ if curdata:
             data = self.sample_io.read_sample(filepath)
 
             # Determine which schema to use
-            schema_version = data.get('Metadata', {}).get('schema_version', '0.0.1')
+            schema_version = data.get('metadata', {}).get('schema_version', '0.0.1')
             schema_path = self._get_schema_path_for_version(schema_version)
 
             if schema_path is None:
@@ -1122,7 +1122,7 @@ if curdata:
             data = self.sample_io.read_sample(filepath)
 
             # Determine which schema to use for editing
-            schema_version = data.get('Metadata', {}).get('schema_version', '0.0.1')
+            schema_version = data.get('metadata', {}).get('schema_version', '0.0.1')
             schema_path = self._get_schema_path_for_version(schema_version)
 
             if schema_path is None:
@@ -1166,8 +1166,8 @@ if curdata:
         if active:
             result = JOptionPane.showConfirmDialog(
                 self.frame,
-                "Active sample '%s' is currently loaded.\nEject it and create new sample?" % active['label'],
-                "Eject Active Sample",
+                "Active sample '%s' is currently loaded.\nMark as ejected and create new sample?" % active['label'],
+                "Mark as Ejected",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE
             )
@@ -1180,7 +1180,7 @@ if curdata:
                 self._refresh_sample_list()
                 self._refresh_timeline()
             except Exception as e:
-                MSG("Error ejecting sample: %s" % str(e))
+                MSG("Error marking sample as ejected: %s" % str(e))
                 return
 
         # Set draft state first
@@ -1221,8 +1221,8 @@ if curdata:
         if active:
             result = JOptionPane.showConfirmDialog(
                 self.frame,
-                "Active sample '%s' is currently loaded.\nEject it and duplicate selected sample?" % active['label'],
-                "Eject Active Sample",
+                "Active sample '%s' is currently loaded.\nMark as ejected and duplicate selected sample?" % active['label'],
+                "Mark as Ejected",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE
             )
@@ -1235,7 +1235,7 @@ if curdata:
                 self._refresh_sample_list()
                 self._refresh_timeline()
             except Exception as e:
-                MSG("Error ejecting sample: %s" % str(e))
+                MSG("Error marking sample as ejected: %s" % str(e))
                 return
 
         try:
@@ -1243,15 +1243,15 @@ if curdata:
             data = self.sample_io.read_sample(filepath)
 
             # Append "(copy)" to label
-            if 'Sample' in data and 'Label' in data['Sample']:
-                data['Sample']['Label'] = data['Sample']['Label'] + " (copy)"
+            if 'sample' in data and 'label' in data['sample']:
+                data['sample']['label'] = data['sample']['label'] + " (copy)"
 
             # Remove metadata timestamps - will be regenerated with current schema
-            if 'Metadata' in data:
-                data['Metadata'].pop('created_timestamp', None)
-                data['Metadata'].pop('modified_timestamp', None)
-                data['Metadata'].pop('ejected_timestamp', None)
-                data['Metadata'].pop('schema_version', None)
+            if 'metadata' in data:
+                data['metadata'].pop('created_timestamp', None)
+                data['metadata'].pop('modified_timestamp', None)
+                data['metadata'].pop('ejected_timestamp', None)
+                data['metadata'].pop('schema_version', None)
 
             # Set draft state first
             self.current_sample_file = None
@@ -1322,7 +1322,7 @@ if curdata:
         result = JOptionPane.showConfirmDialog(
             self.frame,
             "Mark '%s' as ejected?" % active['label'],
-            "Confirm Ejection",
+            "Mark as Ejected",
             JOptionPane.YES_NO_OPTION,
             JOptionPane.QUESTION_MESSAGE
         )
@@ -1334,9 +1334,9 @@ if curdata:
             self._refresh_sample_list()
             self._refresh_timeline()
             self._update_badge()
-            self.update_status("Ejected sample: %s" % active['label'])
+            self.update_status("Marked as ejected: %s" % active['label'])
         except Exception as e:
-            MSG("Error ejecting sample: %s" % str(e))
+            MSG("Error marking sample as ejected: %s" % str(e))
 
     def _delete_sample(self):
         """Delete the selected sample (must be ejected, not active)"""
@@ -1396,7 +1396,7 @@ if curdata:
 
             # Generate filename if new sample
             if not self.current_sample_file:
-                sample_label = data.get('Sample', {}).get('Label', 'Sample')
+                sample_label = data.get('sample', {}).get('label', 'Sample')
                 filename = self.sample_io.generate_filename(sample_label)
                 is_new = True
             else:
@@ -1408,13 +1408,13 @@ if curdata:
                 try:
                     existing_data = self.sample_io.read_sample(filepath)
                     # Preserve metadata fields that shouldn't be changed by editing
-                    if 'Metadata' in existing_data:
-                        if 'Metadata' not in data:
-                            data['Metadata'] = {}
+                    if 'metadata' in existing_data:
+                        if 'metadata' not in data:
+                            data['metadata'] = {}
                         # Preserve creation timestamp and ejection timestamp
-                        data['Metadata']['created_timestamp'] = existing_data['Metadata'].get('created_timestamp')
-                        if 'ejected_timestamp' in existing_data['Metadata']:
-                            data['Metadata']['ejected_timestamp'] = existing_data['Metadata'].get('ejected_timestamp')
+                        data['metadata']['created_timestamp'] = existing_data['metadata'].get('created_timestamp')
+                        if 'ejected_timestamp' in existing_data['metadata']:
+                            data['metadata']['ejected_timestamp'] = existing_data['metadata'].get('ejected_timestamp')
                 except:
                     pass  # If we can't read existing, proceed without preserved metadata
 
@@ -2197,9 +2197,9 @@ class SampleTableMouseListener(MouseAdapter):
 
                 popup.addSeparator()
 
-                # Eject - only enabled for loaded (active) samples
+                # Mark as ejected - only enabled for loaded (active) samples
                 status = row_data.get('status', '')
-                item_eject = JMenuItem("Eject")
+                item_eject = JMenuItem("Mark as ejected")
                 item_eject.setEnabled(status == 'loaded')
                 item_eject.addActionListener(lambda e: self.app._eject_active_sample())
                 popup.add(item_eject)
@@ -2386,6 +2386,20 @@ class CatalogueTableCellRenderer(DefaultTableCellRenderer):
                 else:
                     component.setToolTipText(None)
 
+            elif col_name == 'Users':
+                tooltip = row_data.get('users_tooltip', '')
+                if tooltip:
+                    component.setToolTipText("<html>%s</html>" % tooltip.replace('\n', '<br>'))
+                else:
+                    component.setToolTipText(None)
+
+            elif col_name == 'Experiment':
+                tooltip = row_data.get('experiment_tooltip', '')
+                if tooltip:
+                    component.setToolTipText(tooltip)
+                else:
+                    component.setToolTipText(None)
+
             else:
                 component.setToolTipText(None)
 
@@ -2508,23 +2522,23 @@ class CatalogueMouseListener(MouseAdapter):
             data = self.app.sample_io.read_sample(filepath)
 
             # Append "(copy)" to label
-            if 'Sample' in data and 'Label' in data['Sample']:
-                data['Sample']['Label'] = data['Sample']['Label'] + " (copy)"
+            if 'sample' in data and 'label' in data['sample']:
+                data['sample']['label'] = data['sample']['label'] + " (copy)"
 
             # Remove metadata timestamps - will be regenerated with current schema
-            if 'Metadata' in data:
-                data['Metadata'].pop('created_timestamp', None)
-                data['Metadata'].pop('modified_timestamp', None)
-                data['Metadata'].pop('ejected_timestamp', None)
-                data['Metadata'].pop('schema_version', None)
+            if 'metadata' in data:
+                data['metadata'].pop('created_timestamp', None)
+                data['metadata'].pop('modified_timestamp', None)
+                data['metadata'].pop('ejected_timestamp', None)
+                data['metadata'].pop('schema_version', None)
 
             # Check if active sample exists and prompt to eject
             active = self.app._get_active_sample()
             if active:
                 result = JOptionPane.showConfirmDialog(
                     self.app.frame,
-                    "Active sample '%s' is currently loaded.\nEject it and duplicate selected sample?" % active['label'],
-                    "Eject Active Sample",
+                    "Active sample '%s' is currently loaded.\nMark as ejected and duplicate selected sample?" % active['label'],
+                    "Mark as Ejected",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.WARNING_MESSAGE
                 )

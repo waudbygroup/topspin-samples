@@ -12,7 +12,7 @@ from datetime import datetime
 class SampleIO:
     """Handle reading/writing sample JSON files with proper timestamping"""
 
-    def __init__(self, schema_version="0.0.2"):
+    def __init__(self, schema_version="0.0.3"):
         self.schema_version = schema_version
 
     @staticmethod
@@ -83,18 +83,18 @@ class SampleIO:
             data: Sample data dictionary
             is_new: If True, sets created_timestamp; always updates modified_timestamp
         """
-        # Ensure Metadata section exists
-        if 'Metadata' not in data:
-            data['Metadata'] = {}
+        # Ensure metadata section exists
+        if 'metadata' not in data:
+            data['metadata'] = {}
 
         now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")[:-4] + "Z"
 
         # Set timestamps
-        if is_new or 'created_timestamp' not in data['Metadata']:
-            data['Metadata']['created_timestamp'] = now
+        if is_new or 'created_timestamp' not in data['metadata']:
+            data['metadata']['created_timestamp'] = now
 
-        data['Metadata']['modified_timestamp'] = now
-        data['Metadata']['schema_version'] = self.schema_version
+        data['metadata']['modified_timestamp'] = now
+        data['metadata']['schema_version'] = self.schema_version
 
         # Write JSON file
         try:
@@ -107,12 +107,12 @@ class SampleIO:
         """Add ejected timestamp to sample"""
         data = self.read_sample(filepath)
 
-        if 'Metadata' not in data:
-            data['Metadata'] = {}
+        if 'metadata' not in data:
+            data['metadata'] = {}
 
         now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")[:-4] + "Z"
-        data['Metadata']['ejected_timestamp'] = now
-        data['Metadata']['modified_timestamp'] = now
+        data['metadata']['ejected_timestamp'] = now
+        data['metadata']['modified_timestamp'] = now
 
         self.write_sample(filepath, data, is_new=False)
 
@@ -124,7 +124,7 @@ class SampleIO:
         try:
             data = self.read_sample(filepath)
 
-            if 'Metadata' in data and data['Metadata'].get('ejected_timestamp'):
+            if 'metadata' in data and data['metadata'].get('ejected_timestamp'):
                 return 'ejected'
             else:
                 return 'loaded'  # Active/loaded sample
