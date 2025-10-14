@@ -136,7 +136,8 @@ class TimelineBuilder:
     def _get_experiment_entries(self, directory):
         """
         Get timeline entries from experiment directories
-        Experiment directories are integer-named folders containing 'acqus' file
+        Experiment directories are integer-named folders containing 'acqu' file
+        Only experiments with 'acqus' file (i.e., acquired) are included in timeline
         """
         entries = []
 
@@ -151,28 +152,33 @@ class TimelineBuilder:
                 if os.path.isdir(item_path) and item.isdigit():
                     expno = int(item)
 
-                    # Check for acqus file
+                    # Check for acqu file (indicates valid experiment directory)
+                    acqu_path = os.path.join(item_path, 'acqu')
                     acqus_path = os.path.join(item_path, 'acqus')
-                    if os.path.isfile(acqus_path):
-                        # Get timestamp from acqus file content (not modification time)
-                        try:
-                            dt = self._get_experiment_timestamp(acqus_path)
 
-                            # If we couldn't extract timestamp from file, fall back to mtime
-                            if dt is None:
-                                mtime = os.path.getmtime(acqus_path)
-                                dt = datetime.fromtimestamp(mtime)
+                    if os.path.isfile(acqu_path):
+                        # Check if experiment has been acquired (has acqus file)
+                        if os.path.isfile(acqus_path):
+                            # Acquired experiment - get timestamp from acqus file
+                            try:
+                                dt = self._get_experiment_timestamp(acqus_path)
 
-                            # Try to get experiment details, holder, and parmod from acqus
-                            exp_details, holder, parmod = self._parse_acqus_info(acqus_path)
+                                # If we couldn't extract timestamp from file, fall back to mtime
+                                if dt is None:
+                                    mtime = os.path.getmtime(acqus_path)
+                                    dt = datetime.fromtimestamp(mtime)
 
-                            entry = TimelineEntry('experiment', dt, str(expno), exp_details, holder, parmod)
-                            entry.filepath = item_path
-                            entries.append(entry)
+                                # Try to get experiment details, holder, and parmod from acqus
+                                exp_details, holder, parmod = self._parse_acqus_info(acqus_path)
 
-                        except (OSError, ValueError) as e:
-                            print("Warning: Could not process experiment %s: %s" % (item, str(e)))
-                            continue
+                                entry = TimelineEntry('experiment', dt, str(expno), exp_details, holder, parmod)
+                                entry.filepath = item_path
+                                entries.append(entry)
+
+                            except (OSError, ValueError) as e:
+                                print("Warning: Could not process experiment %s: %s" % (item, str(e)))
+                                continue
+                        # else: experiment not yet acquired (no acqus file) - skip for timeline
 
         except OSError as e:
             print("Warning: Could not list directory %s: %s" % (directory, str(e)))
@@ -182,25 +188,41 @@ class TimelineBuilder:
     @staticmethod
     def _get_experiment_timestamp(acqus_path):
         """
-        Extract experiment timestamp from acqus file
+        Extract experiment timestamp from acqus file and convert to UTC
 
         Looks for a line like:
         $$ 2023-10-11 11:04:48.196 +0100  waudbyc@cl-nmr-spec701
+        or
+        $$ 2021-03-25 22:03:53.590 -0400  nmr@850cbec
 
-        Returns datetime object or None if not found
+        Returns datetime object in UTC or None if not found
         """
         import re
 
         try:
             with open(acqus_path, 'r') as f:
                 for line in f:
-                    # Look for timestamp pattern: $$ YYYY-MM-DD HH:MM:SS
-                    match = re.search(r'\$\$\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})', line)
+                    # Look for timestamp pattern with timezone: $$ YYYY-MM-DD HH:MM:SS.mmm +/-HHMM
+                    match = re.search(r'\$\$\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})(?:\.\d+)?\s+([-+]\d{4})', line)
                     if match:
                         timestamp_str = match.group(1)
+                        tz_offset_str = match.group(2)
+
                         # Parse: 2023-10-11 11:04:48
-                        dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
-                        return dt
+                        dt_local = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+
+                        # Parse timezone offset: +0100 or -0400
+                        tz_sign = 1 if tz_offset_str[0] == '+' else -1
+                        tz_hours = int(tz_offset_str[1:3])
+                        tz_minutes = int(tz_offset_str[3:5])
+                        tz_offset_seconds = tz_sign * (tz_hours * 3600 + tz_minutes * 60)
+
+                        # Convert to UTC by subtracting the timezone offset
+                        # (if local time is +0100, UTC is 1 hour earlier)
+                        from datetime import timedelta
+                        dt_utc = dt_local - timedelta(seconds=tz_offset_seconds)
+
+                        return dt_utc
 
             # Timestamp not found in file
             return None

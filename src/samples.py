@@ -866,12 +866,17 @@ if curdata:
                     BorderFactory.createEmptyBorder(8, 15, 8, 15)
                 ))
 
-                # Format timestamp
+                # Format timestamp - convert UTC to local time for display
                 created = active['created']
                 if created:
                     try:
-                        dt = datetime.strptime(created[:19], "%Y-%m-%dT%H:%M:%S")
-                        time_str = dt.strftime("%I:%M %p").lstrip('0')
+                        import calendar
+                        # Parse UTC timestamp
+                        dt_utc = datetime.strptime(created[:19], "%Y-%m-%dT%H:%M:%S")
+                        # Convert to local time
+                        utc_timestamp = calendar.timegm(dt_utc.timetuple())
+                        dt_local = datetime.fromtimestamp(utc_timestamp)
+                        time_str = dt_local.strftime("%I:%M %p").lstrip('0')
                         self.badge_detail_label.setText("Loaded: " + time_str)
                     except:
                         self.badge_detail_label.setText("Loaded")
@@ -1810,14 +1815,21 @@ if curdata:
             current_sample_color_index = 0  # Track color index for alternating
 
             for entry in entries:
+                # Convert UTC timestamp to local time for display
+                import calendar
+                import time
+                # Convert datetime to timestamp, then to local time
+                utc_timestamp = calendar.timegm(entry.timestamp.timetuple())
+                local_dt = datetime.fromtimestamp(utc_timestamp)
+
                 # Format timestamp for display - capitalize, no zero padding
                 # Manual formatting for cross-platform compatibility
-                day_name = entry.timestamp.strftime("%a")  # Mon, Tue, etc.
-                day = entry.timestamp.day  # 1-31, no zero padding
-                month = entry.timestamp.strftime("%b")  # Jan, Feb, etc.
-                year = entry.timestamp.year
-                hour = entry.timestamp.hour
-                minute = entry.timestamp.minute
+                day_name = local_dt.strftime("%a")  # Mon, Tue, etc.
+                day = local_dt.day  # 1-31, no zero padding
+                month = local_dt.strftime("%b")  # Jan, Feb, etc.
+                year = local_dt.year
+                hour = local_dt.hour
+                minute = local_dt.minute
 
                 # Convert to 12-hour format
                 if hour == 0:
@@ -2299,12 +2311,17 @@ class CatalogueTableModel(AbstractTableModel):
             return None
         row_data = self.rows[row]
         if col == 0:
-            # Format timestamp - date only
+            # Format timestamp - date only, convert UTC to local time
             created = row_data.get('created', '')
             if created:
                 try:
-                    dt = datetime.strptime(created[:19], "%Y-%m-%dT%H:%M:%S")
-                    return dt.strftime("%Y-%m-%d")
+                    import calendar
+                    # Parse UTC timestamp
+                    dt_utc = datetime.strptime(created[:19], "%Y-%m-%dT%H:%M:%S")
+                    # Convert to local time
+                    utc_timestamp = calendar.timegm(dt_utc.timetuple())
+                    dt_local = datetime.fromtimestamp(utc_timestamp)
+                    return dt_local.strftime("%Y-%m-%d")
                 except:
                     return created[:10]
             return ''
