@@ -84,6 +84,8 @@ class SampleManagerApp:
         self.timeline_table = None
         self.timeline_table_model = None
         self.create_from_selection_btn = None
+        self.view_sample_btn = None
+        self.open_experiment_btn = None
         self.tabbed_pane = None
         self.selected_sample_filepath = None
         self.badge_label = None
@@ -448,12 +450,24 @@ class SampleManagerApp:
         panel = JPanel(BorderLayout())
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10))
 
-        # Top panel with button
+        # Top panel with buttons
         top_panel = JPanel(FlowLayout(FlowLayout.LEFT))
-        self.create_from_selection_btn = JButton("Create Sample from Selection")
+
+        self.create_from_selection_btn = JButton("Create retrospective sample from selection")
         self.create_from_selection_btn.setEnabled(False)
         self.create_from_selection_btn.addActionListener(lambda e: self._create_sample_from_experiments())
         top_panel.add(self.create_from_selection_btn)
+
+        self.view_sample_btn = JButton("View/edit sample")
+        self.view_sample_btn.setEnabled(False)
+        self.view_sample_btn.addActionListener(lambda e: self._view_sample_from_timeline())
+        top_panel.add(self.view_sample_btn)
+
+        self.open_experiment_btn = JButton("Open experiment in Topspin")
+        self.open_experiment_btn.setEnabled(False)
+        self.open_experiment_btn.addActionListener(lambda e: self._open_experiment_from_timeline())
+        top_panel.add(self.open_experiment_btn)
+
         panel.add(top_panel, BorderLayout.NORTH)
 
         # Timeline table
@@ -1863,15 +1877,26 @@ if curdata:
                 timestamp_str = "%s %d %s %d, %d.%02d %s" % (day_name, day, month, year, hour_12, minute, am_pm)
 
                 # Determine display name and track sample/holder changes for coloring
+                # Use row_sample_filepath for this specific row (might differ from current_sample_filepath)
+                row_sample_filepath = current_sample_filepath
+                row_color_index = current_sample_color_index
+
                 if entry.entry_type == 'sample_created':
                     display_name = entry.name
-                    # New sample - toggle color
+                    # New sample - toggle color if this is a different sample
                     if current_sample_filepath != entry.filepath:
                         current_sample_color_index = 1 - current_sample_color_index
+                        row_color_index = current_sample_color_index
                     current_sample_filepath = entry.filepath
+                    row_sample_filepath = entry.filepath
                 elif entry.entry_type == 'sample_ejected':
                     display_name = "sample ejected"
-                    # Keep current_sample_filepath and color for coloring
+                    # Ejection event: use current sample for THIS row
+                    row_sample_filepath = current_sample_filepath
+                    row_color_index = current_sample_color_index
+                    # But clear it for subsequent rows and toggle color
+                    current_sample_filepath = None
+                    current_sample_color_index = 1 - current_sample_color_index
                 elif entry.entry_type == 'experiment':
                     display_name = "Exp %s" % entry.name
                     # If no samples defined, use holder for color alternation
@@ -1898,8 +1923,8 @@ if curdata:
                     'holder': holder_str,
                     'details': details,
                     'entry': entry,
-                    'sample_filepath': current_sample_filepath,  # For highlighting
-                    'color_index': current_sample_color_index,  # For consistent coloring
+                    'sample_filepath': row_sample_filepath,  # For highlighting
+                    'color_index': row_color_index,  # For consistent coloring
                     'parmod': entry.parmod if entry.entry_type == 'experiment' else None  # For dimensionality coloring
                 })
 
@@ -1944,8 +1969,10 @@ if curdata:
 
     def _validate_timeline_selection_for_sample(self):
         """
-        Validate timeline selection for creating a sample.
-        Returns True if selection is valid (contiguous experiments only, no samples).
+        Validate timeline selection for creating a retrospective sample.
+        Returns True if selection is valid:
+        - Contiguous experiments only (no sample events)
+        - No experiments belonging to existing samples
         """
         selected_rows = self.timeline_table.getSelectedRows()
 
@@ -1954,6 +1981,7 @@ if curdata:
             return False
 
         # Check if all selected rows are experiments (not sample events)
+        # Also check that none belong to existing samples
         model = self.timeline_table.getModel()
         for row in selected_rows:
             row_data = model.get_row(row)
@@ -1961,6 +1989,9 @@ if curdata:
                 return False
             entry = row_data['entry']
             if entry.entry_type != 'experiment':
+                return False
+            # Check if this experiment belongs to an existing sample
+            if row_data.get('sample_filepath'):
                 return False
 
         # Check if rows are contiguous
@@ -1972,10 +2003,88 @@ if curdata:
         return True
 
     def _update_timeline_selection_state(self):
-        """Update button state based on timeline selection"""
+        """Update button states based on timeline selection"""
         if self.create_from_selection_btn:
-            valid = self._validate_timeline_selection_for_sample()
-            self.create_from_selection_btn.setEnabled(valid)
+            can_create = self._validate_timeline_selection_for_sample()
+            self.create_from_selection_btn.setEnabled(can_create)
+
+        if self.view_sample_btn:
+            can_view = self._can_view_sample_from_timeline()
+            self.view_sample_btn.setEnabled(can_view)
+
+        if self.open_experiment_btn:
+            can_open = self._can_open_experiment_from_timeline()
+            self.open_experiment_btn.setEnabled(can_open)
+
+    def _can_view_sample_from_timeline(self):
+        """Check if we can view/edit a sample (selection includes experiment belonging to a sample)"""
+        selected_rows = self.timeline_table.getSelectedRows()
+        if len(selected_rows) != 1:
+            return False
+
+        model = self.timeline_table.getModel()
+        row_data = model.get_row(selected_rows[0])
+        if not row_data:
+            return False
+
+        # Can view if this row has an associated sample
+        return row_data.get('sample_filepath') is not None
+
+    def _can_open_experiment_from_timeline(self):
+        """Check if we can open an experiment (single experiment row selected)"""
+        selected_rows = self.timeline_table.getSelectedRows()
+        if len(selected_rows) != 1:
+            return False
+
+        model = self.timeline_table.getModel()
+        row_data = model.get_row(selected_rows[0])
+        if not row_data or 'entry' not in row_data:
+            return False
+
+        entry = row_data['entry']
+        return entry.entry_type == 'experiment'
+
+    def _view_sample_from_timeline(self):
+        """View/edit the sample associated with the selected experiment"""
+        if not self._can_view_sample_from_timeline():
+            return
+
+        selected_rows = self.timeline_table.getSelectedRows()
+        model = self.timeline_table.getModel()
+        row_data = model.get_row(selected_rows[0])
+
+        sample_filepath = row_data.get('sample_filepath')
+        if not sample_filepath:
+            return
+
+        # Find this sample in the sample table and select it
+        filename = os.path.basename(sample_filepath)
+        sample_files = self.sample_io.list_sample_files(self.current_directory)
+
+        for idx, fname in enumerate(sample_files):
+            if fname == filename:
+                self.sample_table.setRowSelectionInterval(idx, idx)
+                self.sample_table.scrollRectToVisible(
+                    self.sample_table.getCellRect(idx, 0, True)
+                )
+                # Switch to Sample Details tab
+                self.tabbed_pane.setSelectedIndex(0)
+                # Edit the sample
+                self._edit_sample()
+                break
+
+    def _open_experiment_from_timeline(self):
+        """Open the selected experiment in TopSpin"""
+        if not self._can_open_experiment_from_timeline():
+            return
+
+        selected_rows = self.timeline_table.getSelectedRows()
+        model = self.timeline_table.getModel()
+        row_data = model.get_row(selected_rows[0])
+
+        if row_data and 'entry' in row_data:
+            entry = row_data['entry']
+            self.handle_timeline_double_click(entry)
 
     def _create_sample_from_experiments(self):
         """Create a retrospective sample from selected experiments"""
@@ -2439,14 +2548,30 @@ class TimelineMouseListener(MouseAdapter):
             # Create context menu
             popup = JPopupMenu()
 
-            # Check if we have a valid selection for creating a sample
-            valid_selection = self.app._validate_timeline_selection_for_sample()
+            # Get validation states for different actions
+            can_create_retrospective = self.app._validate_timeline_selection_for_sample()
+            can_view_sample = self.app._can_view_sample_from_timeline()
+            can_open_experiment = self.app._can_open_experiment_from_timeline()
 
-            # Create Sample from Selection - enabled when valid selection
-            item_create = JMenuItem("Create Sample from Selection")
-            item_create.setEnabled(valid_selection)
+            # Create retrospective sample - enabled when valid selection
+            item_create = JMenuItem("Create retrospective sample from selection")
+            item_create.setEnabled(can_create_retrospective)
             item_create.addActionListener(lambda e: self.app._create_sample_from_experiments())
             popup.add(item_create)
+
+            popup.addSeparator()
+
+            # View/Edit Sample - enabled when experiment belonging to sample is selected
+            item_view = JMenuItem("View/edit sample")
+            item_view.setEnabled(can_view_sample)
+            item_view.addActionListener(lambda e: self.app._view_sample_from_timeline())
+            popup.add(item_view)
+
+            # Open Experiment - enabled when experiment is selected
+            item_open = JMenuItem("Open experiment in Topspin")
+            item_open.setEnabled(can_open_experiment)
+            item_open.addActionListener(lambda e: self.app._open_experiment_from_timeline())
+            popup.add(item_open)
 
             popup.show(event.getComponent(), event.getX(), event.getY())
 
