@@ -16,14 +16,20 @@ class SampleIO:
         self.schema_version = schema_version
 
     @staticmethod
-    def generate_filename(sample_label):
+    def generate_filename(sample_label, timestamp=None):
         """
         Generate filename for new sample following convention:
         YYYY-MM-DD_HHMMSS_samplename.json
+
+        Args:
+            sample_label: Label for the sample
+            timestamp: Optional datetime object to use (defaults to now)
         """
-        now = datetime.now()
-        date_part = now.strftime("%Y-%m-%d")
-        time_part = now.strftime("%H%M%S")
+        if timestamp is None:
+            timestamp = datetime.now()
+
+        date_part = timestamp.strftime("%Y-%m-%d")
+        time_part = timestamp.strftime("%H%M%S")
 
         # Sanitize sample label for filename
         safe_label = sample_label.replace(" ", "_")

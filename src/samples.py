@@ -14,7 +14,8 @@ from java.lang import System
 import java.awt.event
 import sys
 import os
-from datetime import datetime
+import json
+from datetime import datetime, timedelta
 
 # Add lib directory to path - use script directory fallback since __file__ may not be defined in Jython
 try:
@@ -82,6 +83,7 @@ class SampleManagerApp:
         self.form_panel = None
         self.timeline_table = None
         self.timeline_table_model = None
+        self.create_from_selection_btn = None
         self.tabbed_pane = None
         self.selected_sample_filepath = None
         self.badge_label = None
@@ -446,6 +448,14 @@ class SampleManagerApp:
         panel = JPanel(BorderLayout())
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10))
 
+        # Top panel with button
+        top_panel = JPanel(FlowLayout(FlowLayout.LEFT))
+        self.create_from_selection_btn = JButton("Create Sample from Selection")
+        self.create_from_selection_btn.setEnabled(False)
+        self.create_from_selection_btn.addActionListener(lambda e: self._create_sample_from_experiments())
+        top_panel.add(self.create_from_selection_btn)
+        panel.add(top_panel, BorderLayout.NORTH)
+
         # Timeline table
         self.timeline_table_model = TimelineTableModel()
         self.timeline_table = JTable(self.timeline_table_model)
@@ -459,6 +469,11 @@ class SampleManagerApp:
 
         # Double-click listener
         self.timeline_table.addMouseListener(TimelineMouseListener(self))
+
+        # Selection listener to update button state
+        self.timeline_table.getSelectionModel().addListSelectionListener(
+            lambda e: self._update_timeline_selection_state() if not e.getValueIsAdjusting() else None
+        )
 
         scroll_pane = JScrollPane(self.timeline_table)
         panel.add(scroll_pane, BorderLayout.CENTER)
@@ -1927,6 +1942,133 @@ if curdata:
             except Exception as e:
                 self.update_status("Error opening experiment: %s" % str(e))
 
+    def _validate_timeline_selection_for_sample(self):
+        """
+        Validate timeline selection for creating a sample.
+        Returns True if selection is valid (contiguous experiments only, no samples).
+        """
+        selected_rows = self.timeline_table.getSelectedRows()
+
+        # Need at least one row selected
+        if len(selected_rows) == 0:
+            return False
+
+        # Check if all selected rows are experiments (not sample events)
+        model = self.timeline_table.getModel()
+        for row in selected_rows:
+            row_data = model.get_row(row)
+            if not row_data or 'entry' not in row_data:
+                return False
+            entry = row_data['entry']
+            if entry.entry_type != 'experiment':
+                return False
+
+        # Check if rows are contiguous
+        sorted_rows = sorted(selected_rows)
+        for i in range(len(sorted_rows) - 1):
+            if sorted_rows[i+1] - sorted_rows[i] != 1:
+                return False
+
+        return True
+
+    def _update_timeline_selection_state(self):
+        """Update button state based on timeline selection"""
+        if self.create_from_selection_btn:
+            valid = self._validate_timeline_selection_for_sample()
+            self.create_from_selection_btn.setEnabled(valid)
+
+    def _create_sample_from_experiments(self):
+        """Create a retrospective sample from selected experiments"""
+        # Validate selection
+        if not self._validate_timeline_selection_for_sample():
+            MSG("Please select contiguous experiment rows (no sample events)")
+            return
+
+        # Get selected experiments
+        selected_rows = sorted(self.timeline_table.getSelectedRows())
+        model = self.timeline_table.getModel()
+
+        experiments = []
+        for row in selected_rows:
+            row_data = model.get_row(row)
+            if row_data and 'entry' in row_data:
+                experiments.append(row_data['entry'])
+
+        if len(experiments) == 0:
+            MSG("No experiments selected")
+            return
+
+        # Get timestamps of first and last experiments
+        first_exp = experiments[0]
+        last_exp = experiments[-1]
+
+        # Add a few seconds before/after for safety
+        created_time = first_exp.timestamp - timedelta(seconds=5)
+        ejected_time = last_exp.timestamp + timedelta(seconds=5)
+
+        # Format timestamps as ISO 8601 in UTC
+        created_timestamp = created_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        ejected_timestamp = ejected_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+        # Create empty sample with these timestamps
+        # Use the schema default structure
+        try:
+            # Load schema to get version
+            schema_version = '0.0.3'  # Default version
+            try:
+                with open(self.current_schema_path, 'r') as f:
+                    schema = json.load(f)
+                    schema_version = schema.get('version', '0.0.3')
+            except:
+                pass  # Use default if can't read schema
+
+            # Create default sample data
+            sample_data = {
+                'sample': {'label': ''},
+                'buffer': {},
+                'nmr_tube': {},
+                'laboratory_reference': {},
+                'metadata': {
+                    'schema_version': schema_version,
+                    'created_timestamp': created_timestamp,
+                    'modified_timestamp': created_timestamp,
+                    'ejected_timestamp': ejected_timestamp
+                },
+                'users': [],
+                'notes': ''
+            }
+
+            # Create a descriptive filename based on first experiment timestamp
+            filename = self.sample_io.generate_filename('retrospective', timestamp=created_time)
+            filepath = os.path.join(self.current_directory, filename)
+
+            # Save the sample (it's already ejected, so no auto-eject logic)
+            self.sample_io.write_sample(filepath, sample_data)
+
+            # Refresh views
+            self._refresh_sample_list()
+            self._refresh_timeline()
+            self._refresh_catalogue()
+
+            # Select the new sample in the list and open for editing
+            sample_files = self.sample_io.list_sample_files(self.current_directory)
+            for idx, fname in enumerate(sample_files):
+                if fname == filename:
+                    self.sample_table.setRowSelectionInterval(idx, idx)
+                    self.sample_table.scrollRectToVisible(
+                        self.sample_table.getCellRect(idx, 0, True)
+                    )
+                    # Switch to Sample Details tab and edit
+                    self.tabbed_pane.setSelectedIndex(0)
+                    self._edit_sample()
+                    break
+
+            self.update_status("Created retrospective sample for %d experiments" % len(experiments))
+
+        except Exception as e:
+            MSG("Error creating sample: %s" % str(e))
+            self.update_status("Error creating sample")
+
     def update_status(self, text):
         """Update status label"""
         self.status_label.setText(text)
@@ -2263,7 +2405,7 @@ class SampleTableMouseListener(MouseAdapter):
 
 
 class TimelineMouseListener(MouseAdapter):
-    """Mouse listener for timeline double-clicks"""
+    """Mouse listener for timeline double-clicks and context menu"""
 
     def __init__(self, app):
         self.app = app
@@ -2276,6 +2418,37 @@ class TimelineMouseListener(MouseAdapter):
                 row_data = table.getModel().get_row(row)
                 if row_data and 'entry' in row_data:
                     self.app.handle_timeline_double_click(row_data['entry'])
+
+    def mousePressed(self, event):
+        self._handle_popup(event)
+
+    def mouseReleased(self, event):
+        self._handle_popup(event)
+
+    def _handle_popup(self, event):
+        if event.isPopupTrigger():
+            table = event.getSource()
+            row = table.rowAtPoint(event.getPoint())
+
+            # Select row if not already selected (if clicking on a row)
+            if row >= 0:
+                selected_rows = table.getSelectedRows()
+                if row not in selected_rows:
+                    table.setRowSelectionInterval(row, row)
+
+            # Create context menu
+            popup = JPopupMenu()
+
+            # Check if we have a valid selection for creating a sample
+            valid_selection = self.app._validate_timeline_selection_for_sample()
+
+            # Create Sample from Selection - enabled when valid selection
+            item_create = JMenuItem("Create Sample from Selection")
+            item_create.setEnabled(valid_selection)
+            item_create.addActionListener(lambda e: self.app._create_sample_from_experiments())
+            popup.add(item_create)
+
+            popup.show(event.getComponent(), event.getX(), event.getY())
 
 
 class CancelAction(AbstractAction):
