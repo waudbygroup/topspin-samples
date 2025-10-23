@@ -2,15 +2,6 @@
 
 This guide will walk you through installing the NMR Sample Manager in TopSpin. The process is straightforward and takes about 5 minutes.
 
-## Prerequisites
-
-- **Bruker TopSpin** (any recent version with Jython 2.7.2 support)
-- **Git** (for cloning the repository)
-- **Basic command line skills** (we'll guide you through each step)
-
-!!! note "Installation Location"
-    You **cannot** install Sample Manager within TopSpin's `/opt/topspin...` directories. You'll need to choose a location where you have write permissions, such as your home directory or a shared lab folder.
-
 ## Step 1: Choose Installation Location
 
 First, decide where to install Sample Manager. Good options include:
@@ -22,6 +13,9 @@ cd ~
 # Or in a shared lab directory (recommended for multi-user facilities)
 cd /path/to/shared/lab/software
 ```
+
+!!! note "Installation Location"
+    You **cannot** install Sample Manager within TopSpin's `/opt/topspin...` directories. You'll need to choose a location where you have write permissions, such as your home directory or a shared lab folder.
 
 ## Step 2: Clone the Repository
 
@@ -49,10 +43,7 @@ In TopSpin, type `setres` to open the Resource Editor. Navigate to **Directories
 ### 3.2 Save and Restart
 
 1. Click **"Save"** or **"OK"** in the setres window
-2. **Restart TopSpin** to apply the changes
-
-!!! note "Why restart?"
-    TopSpin only loads the Python path configuration at startup, so you need to restart for the changes to take effect.
+2. You may need to **Restart TopSpin** to apply the changes
 
 ## Step 4: Verify Installation
 
@@ -68,30 +59,6 @@ After restarting TopSpin, verify that Sample Manager is installed correctly:
 ![Sample Manager main window](../images/sample-catalogue.png)
 
 If you see the window, congratulations! Sample Manager is installed and ready to use.
-
-### Troubleshooting
-
-!!! failure "Command not found"
-    If TopSpin says `samples` command is not found:
-
-    - Check that you added the correct path to PYTHONPATH in setres
-    - Make sure the path points to the `src` directory, not the parent `topspin-samples` directory
-    - Verify that you restarted TopSpin after making changes
-    - Check that the `samples.py` file exists in the `src` directory
-
-!!! failure "Import errors or Python exceptions"
-    If you see Python errors when running `samples`:
-
-    - Make sure you cloned the entire repository, including the `src/lib` subdirectory
-    - Check that all files in `src/` and `src/lib/` were copied correctly
-    - Try cloning the repository again in case of corrupted files
-
-!!! failure "Window appears but is blank or broken"
-    If the GUI appears but looks wrong:
-
-    - This may indicate a Java/Swing version compatibility issue
-    - Check your TopSpin and Java versions
-    - Report the issue on [GitHub](https://github.com/waudbygroup/topspin-samples/issues) with details about your setup
 
 ## Step 5: Updating Sample Manager
 
@@ -132,17 +99,6 @@ For labs with multiple NMR users, we recommend:
    ```
 
 2. **Each user configures their own TopSpin** by adding the shared path to PYTHONPATH via `setres`
-
-3. **Coordinate schema updates** - when updating via `git pull`, inform all lab members to restart TopSpin
-
-### Core Facility Setup
-
-For NMR facilities serving multiple research groups:
-
-1. Install Sample Manager in a central location
-2. Add documentation about Sample Manager to your facility's user manual
-3. Provide training sessions for new users
-4. Consider creating facility-specific templates for common sample types
 
 ## Uninstallation
 
