@@ -62,6 +62,10 @@ If you see the window, congratulations! Sample Manager is installed and ready to
 
 ## Step 5: Updating Sample Manager
 
+The app checks automatically on startup to see if updates are available (provided the spectrometer is connected to the internet):
+
+![Automatic detection of updates](../images/updates.png)
+
 To update to the latest version of Sample Manager:
 
 1. Open a terminal and navigate to your installation directory:
