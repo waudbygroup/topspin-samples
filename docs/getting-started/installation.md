@@ -80,8 +80,6 @@ To update to the latest version of Sample Manager:
 
 3. Restart TopSpin to load the updated code
 
-!!! tip "Auto-update in TopSpin"
-    A future version may include an auto-update feature within the GUI. For now, manual updates via git are required.
 
 ## Next Steps
 
