@@ -70,6 +70,7 @@ class SampleManagerApp:
         # GUI components
         self.frame = None
         self.status_label = None
+        self.update_label = None
         self.dir_label = None
         self.sample_table = None
         self.sample_table_model = None
@@ -102,6 +103,8 @@ class SampleManagerApp:
         self._create_gui()
         self._set_initial_button_states()
         self._navigate_to_curdata()
+        # Check for updates in background
+        self._check_updates_background()
 
     def _set_initial_button_states(self):
         """Set initial button enabled/disabled states"""
@@ -135,6 +138,67 @@ class SampleManagerApp:
             return result.strip()
         except:
             return None
+
+    def _check_for_updates(self):
+        """Check if git updates are available
+
+        Returns:
+            tuple: (has_updates, error_message) where has_updates is bool or None if error
+        """
+        try:
+            import subprocess
+
+            # First, try to fetch from remote (silently)
+            try:
+                subprocess.check_output(
+                    ['git', 'fetch', 'origin'],
+                    cwd=self.script_dir,
+                    stderr=subprocess.STDOUT,
+                    timeout=5  # 5 second timeout for network operations
+                )
+            except subprocess.CalledProcessError:
+                # Fetch failed - might be offline or no git
+                return (None, "Unable to check for updates - check internet connection")
+            except:
+                # Other error (timeout, git not available, etc.)
+                return (None, "Unable to check for updates")
+
+            # Compare local HEAD with origin/main
+            try:
+                local = subprocess.check_output(
+                    ['git', 'rev-parse', 'HEAD'],
+                    cwd=self.script_dir,
+                    stderr=subprocess.STDOUT
+                ).strip()
+
+                remote = subprocess.check_output(
+                    ['git', 'rev-parse', 'origin/main'],
+                    cwd=self.script_dir,
+                    stderr=subprocess.STDOUT
+                ).strip()
+
+                # Check if we're behind
+                if local != remote:
+                    # Check if local is ancestor of remote (we're behind)
+                    try:
+                        subprocess.check_output(
+                            ['git', 'merge-base', '--is-ancestor', 'HEAD', 'origin/main'],
+                            cwd=self.script_dir,
+                            stderr=subprocess.STDOUT
+                        )
+                        return (True, None)  # Updates available
+                    except subprocess.CalledProcessError:
+                        # We have diverged - not a simple update case
+                        return (None, "Local changes detected")
+
+                return (False, None)  # Up to date
+
+            except:
+                return (None, "Unable to compare versions")
+
+        except:
+            # Git not available or other error
+            return (None, None)
 
     def _create_gui(self):
         """Build the GUI"""
@@ -631,6 +695,14 @@ class SampleManagerApp:
         left_panel.add(self.status_label)
         panel.add(left_panel, BorderLayout.WEST)
 
+        # Center - update indicator (initially hidden)
+        center_panel = JPanel(FlowLayout(FlowLayout.CENTER))
+        self.update_label = JLabel("")
+        self.update_label.setVisible(False)
+        self.update_label.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
+        center_panel.add(self.update_label)
+        panel.add(center_panel, BorderLayout.CENTER)
+
         # Right side - repository link
         right_panel = JPanel(FlowLayout(FlowLayout.RIGHT))
         repo_link = JLabel("<html><a href=''>View Documentation...</a></html>")
@@ -665,7 +737,45 @@ class SampleManagerApp:
         right_panel.add(repo_link)
         panel.add(right_panel, BorderLayout.EAST)
 
+        # Add click handler for update indicator
+        def show_update_instructions(event):
+            msg = ("Updates are available!\n\n"
+                   "To update, run the following command in the installation directory:\n\n"
+                   "git pull\n\n"
+                   "Installation directory: %s") % self.script_dir
+            MSG(msg)
+
+        class UpdateMouseAdapter(java.awt.event.MouseAdapter):
+            def __init__(self, handler):
+                self._handler = handler
+
+            def mouseClicked(self, event):
+                try:
+                    self._handler(event)
+                except Exception as e:
+                    MSG("Error: %s" % str(e))
+
+        self.update_label.addMouseListener(UpdateMouseAdapter(show_update_instructions))
+
         return panel
+
+    def _update_update_indicator(self, has_updates, error_msg):
+        """Update the update indicator in the status bar
+
+        Args:
+            has_updates: True if updates available, False if up to date, None if error
+            error_msg: Error message if has_updates is None
+        """
+        if has_updates is True:
+            self.update_label.setText("<html><a href=''>Update Available - Click for Instructions</a></html>")
+            self.update_label.setForeground(Color(255, 140, 0))  # Orange
+            self.update_label.setVisible(True)
+        elif has_updates is False:
+            # Up to date - hide the indicator
+            self.update_label.setVisible(False)
+        else:
+            # Error checking for updates - don't show anything to avoid clutter
+            self.update_label.setVisible(False)
 
     def _navigate_to_curdata(self):
         """Navigate to current TopSpin dataset directory"""
@@ -2182,12 +2292,27 @@ if curdata:
         """Update status label"""
         self.status_label.setText(text)
 
+    def _check_updates_background(self):
+        """Check for updates in a background thread to avoid blocking UI"""
+        import threading
+
+        def check_and_update():
+            has_updates, error_msg = self._check_for_updates()
+            # Update UI on the Event Dispatch Thread
+            SwingUtilities.invokeLater(lambda: self._update_update_indicator(has_updates, error_msg))
+
+        thread = threading.Thread(target=check_and_update)
+        thread.daemon = True
+        thread.start()
+
     def show(self):
         """Show the window if hidden"""
         if self.frame is not None:
             self.frame.setVisible(True)
             self.frame.toFront()
             self.frame.requestFocus()
+            # Check for updates in background
+            self._check_updates_background()
 
     def shutdown(self):
         """Properly shut down the application"""
