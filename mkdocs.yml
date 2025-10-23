@@ -1,14 +1,14 @@
 # MkDocs configuration for NMR Sample Manager
 site_name: NMR Sample Manager for TopSpin
-site_description: Lightweight sample metadata management system for Bruker TopSpin
-site_url: https://waudbygroup.github.io/topspin-samples/
+site_description: Lightweight sample management system for Bruker TopSpin
+site_url: https://waudbylab.org/topspin-samples/
 repo_url: https://github.com/waudbygroup/topspin-samples
 repo_name: waudbygroup/topspin-samples
 
 theme:
   name: material
   icon:
-    logo: material/flask
+    logo: material/test-tube
   palette:
     # Palette toggle for automatic mode
     - media: "(prefers-color-scheme)"
@@ -72,7 +72,7 @@ nav:
   - Getting Started:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
-  - Usage: guide/usage.md
+  - Usage: usage.md
   - Contributing: contributing.md
   - Related Projects: related.md
 
