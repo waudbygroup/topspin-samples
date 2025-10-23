@@ -118,7 +118,6 @@ Now that Sample Manager is installed, you're ready to start using it:
 
 - **[Quick Start Guide](quickstart.md)** - Learn the basic workflow
 - **[Usage Guide](../guide/usage.md)** - Explore all features in detail
-- **[Schema Reference](../guide/schema.md)** - Understand the metadata structure
 
 ## Multi-User Installations
 
@@ -143,7 +142,7 @@ For NMR facilities serving multiple research groups:
 1. Install Sample Manager in a central location
 2. Add documentation about Sample Manager to your facility's user manual
 3. Provide training sessions for new users
-4. Consider creating facility-specific templates for common sample types (see [Tips & Tricks](../guide/tips.md))
+4. Consider creating facility-specific templates for common sample types
 
 ## Uninstallation
 

@@ -71,7 +71,7 @@ For similar samples, use the duplicate feature. Select an existing sample, click
 
 ## Next Steps
 
-Explore the [full usage guide](../guide/usage.md) for all features, read [understanding the schema](../guide/schema.md) to learn what each field means, or check out [tips and tricks](../guide/tips.md) for power user features.
+Explore the [full usage guide](../guide/usage.md) for all features and detailed documentation.
 
 ---
 

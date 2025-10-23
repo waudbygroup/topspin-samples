@@ -80,8 +80,6 @@ When creating or editing samples, you'll see a form with several sections. All f
 
 **Metadata** - Automatically managed fields including schema_version, created_timestamp, modified_timestamp, and ejected_timestamp.
 
-For detailed field descriptions, see the [schema guide](schema.md).
-
 ## Integration Commands
 
 Sample Manager provides TopSpin commands for workflow integration:

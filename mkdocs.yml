@@ -72,10 +72,7 @@ nav:
   - Getting Started:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
-  - User Guide:
-    - Usage: guide/usage.md
-    - The Schema: guide/schema.md
-    - Tips & Tricks: guide/tips.md
+  - Usage: guide/usage.md
   - Contributing: contributing.md
   - Related Projects: related.md
 
