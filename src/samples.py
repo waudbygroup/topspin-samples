@@ -143,27 +143,32 @@ class SampleManagerApp:
         """Check if git updates are available
 
         Returns:
-            tuple: (has_updates, error_message) where has_updates is bool or None if error
+            tuple: (has_updates, error_message, debug_info) where has_updates is bool or None if error
         """
         try:
             import subprocess
 
             # First, try to fetch from remote (silently)
+            self.update_status("Checking for updates - fetching...")
             try:
                 subprocess.check_output(
                     ['git', 'fetch', 'origin'],
                     cwd=self.script_dir,
-                    stderr=subprocess.STDOUT,
-                    timeout=5  # 5 second timeout for network operations
+                    stderr=subprocess.STDOUT
                 )
-            except subprocess.CalledProcessError:
+            except subprocess.CalledProcessError as e:
                 # Fetch failed - might be offline or no git
-                return (None, "Unable to check for updates - check internet connection")
-            except:
+                debug_msg = "Fetch failed: %s" % str(e)
+                self.update_status("Ready")
+                return (None, "Unable to check for updates - check internet connection", debug_msg)
+            except Exception as e:
                 # Other error (timeout, git not available, etc.)
-                return (None, "Unable to check for updates")
+                debug_msg = "Fetch error: %s" % str(e)
+                self.update_status("Ready")
+                return (None, "Unable to check for updates", debug_msg)
 
             # Compare local HEAD with origin/main
+            self.update_status("Checking for updates - comparing versions...")
             try:
                 local = subprocess.check_output(
                     ['git', 'rev-parse', 'HEAD'],
@@ -186,19 +191,29 @@ class SampleManagerApp:
                             cwd=self.script_dir,
                             stderr=subprocess.STDOUT
                         )
-                        return (True, None)  # Updates available
+                        debug_msg = "Checked for updates - local version: %s, remote version: %s" % (local[:8], remote[:8])
+                        self.update_status(debug_msg)
+                        return (True, None, debug_msg)  # Updates available
                     except subprocess.CalledProcessError:
                         # We have diverged - not a simple update case
-                        return (None, "Local changes detected")
+                        debug_msg = "Checked for updates - local version: %s, remote version: %s (diverged)" % (local[:8], remote[:8])
+                        self.update_status(debug_msg)
+                        return (None, "Local changes detected", debug_msg)
 
-                return (False, None)  # Up to date
+                debug_msg = "Checked for updates - up to date (version: %s)" % local[:8]
+                self.update_status(debug_msg)
+                return (False, None, debug_msg)  # Up to date
 
-            except:
-                return (None, "Unable to compare versions")
+            except Exception as e:
+                debug_msg = "Version compare error: %s" % str(e)
+                self.update_status("Ready")
+                return (None, "Unable to compare versions", debug_msg)
 
-        except:
+        except Exception as e:
             # Git not available or other error
-            return (None, None)
+            debug_msg = "Git error: %s" % str(e)
+            self.update_status("Ready")
+            return (None, None, debug_msg)
 
     def _create_gui(self):
         """Build the GUI"""
@@ -759,12 +774,13 @@ class SampleManagerApp:
 
         return panel
 
-    def _update_update_indicator(self, has_updates, error_msg):
+    def _update_update_indicator(self, has_updates, error_msg, debug_info):
         """Update the update indicator in the status bar
 
         Args:
             has_updates: True if updates available, False if up to date, None if error
             error_msg: Error message if has_updates is None
+            debug_info: Debug information to display
         """
         if has_updates is True:
             self.update_label.setText("<html><a href=''>Update Available - Click for Instructions</a></html>")
@@ -2297,9 +2313,9 @@ if curdata:
         import threading
 
         def check_and_update():
-            has_updates, error_msg = self._check_for_updates()
+            has_updates, error_msg, debug_info = self._check_for_updates()
             # Update UI on the Event Dispatch Thread
-            SwingUtilities.invokeLater(lambda: self._update_update_indicator(has_updates, error_msg))
+            SwingUtilities.invokeLater(lambda: self._update_update_indicator(has_updates, error_msg, debug_info))
 
         thread = threading.Thread(target=check_and_update)
         thread.daemon = True
