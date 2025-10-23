@@ -13,7 +13,7 @@ A lightweight sample metadata management system for Bruker TopSpin, built using 
 
 NMR workflows focus on data acquisition and processing, but sample tracking has been a longstanding blind spot. Bruker TopSpin manages *experiments* effectively, but provides no systematic way to record or retrieve information about *samples* -- e.g. protein concentrations, buffer compositions, isotopic labelling schemes, chemical shift referencing, NMR tube types. This often causes problems when looking back over old data or preparing data for repository submission.
 
-This tool provides a simple JSON schema for recording sample metadata, creating a lightweight, parallel system that captures sample information alongside TopSpin workflows.
+This tool provides a simple schema for recording sample metadata, creating a lightweight, parallel system capturing sample information in JSON text files within experiment directories.
 
 ### Related Repository
 
