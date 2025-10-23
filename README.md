@@ -2,7 +2,7 @@
 
 [![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://waudbygroup.github.io/topspin-samples/)
 
-A lightweight sample metadata management system for Bruker TopSpin, built with Jython and Java Swing.
+A lightweight sample metadata management system for Bruker TopSpin, built using the internal python interface.
 
 ![Screenshot - Sample editing](assets/screenshot.png)
 ![Screenshot - Experimental timeline](assets/screenshot-timeline.png)
@@ -21,7 +21,7 @@ The JSON schema used by this tool is maintained separately in the [nmr-sample-sc
 
 ## Features
 
-- **TopSpin Integration**: Runs natively within TopSpin's Jython environment
+- **TopSpin Integration**: Runs natively within TopSpin
 - **GUI Interface**: Java Swing-based interface with form-based metadata entry
 - **Timeline View**: Chronological visualization of samples and experiments
 - **Schema Validation**: JSON Schema-based validation ensures data consistency
