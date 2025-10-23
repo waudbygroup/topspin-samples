@@ -1,7 +1,7 @@
 # NMR Sample Manager for TopSpin
 
 [![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://waudbygroup.github.io/topspin-samples/)
-[![DOI](https://zenodo.org/badge/1073026274.svg)](https://doi.org/10.5281/zenodo.17427482)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.17427482-blue)](https://doi.org/10.5281/zenodo.17427482)
 
 
 A lightweight sample metadata management system for Bruker TopSpin, built using the internal python interface.
