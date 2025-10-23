@@ -56,9 +56,9 @@ Sample Manager is open-source (MIT licence), lightweight (no databases, just JSO
 
 ## Getting Started
 
-Installation takes about 5 minutes: clone the repository and add to TopSpin's Python path via `setres`. Follow our [installation guide](getting-started/installation.md) for detailed instructions, then try the [quick start guide](getting-started/quickstart.md) to create your first sample. The [full documentation](guide/usage.md) covers features in detail.
+Installation takes about 5 minutes: clone the repository and add to TopSpin's Python path via `setres`. Follow our [installation guide](getting-started/installation.md) for detailed instructions, then try the [quick start guide](getting-started/quickstart.md) to create your first sample. The [full documentation](usage.md) covers features in detail.
 
 ## Get Help and Contribute
 
-Browse the [documentation](guide/usage.md) for detailed usage information. Report bugs or request features via [GitHub Issues](https://github.com/waudbygroup/topspin-samples/issues). Contact Chris Waudby at [c.waudby@ucl.ac.uk](mailto:c.waudby@ucl.ac.uk) for questions or feedback. Contributions from the NMR community are welcome - see our [contributing guide](contributing.md) for how to get involved.
+Browse the [documentation](usage.md) for detailed usage information. Report bugs or request features via [GitHub Issues](https://github.com/waudbygroup/topspin-samples/issues). Contact Chris Waudby at [c.waudby@ucl.ac.uk](mailto:c.waudby@ucl.ac.uk) for questions or feedback. Contributions from the NMR community are welcome - see our [contributing guide](contributing.md) for how to get involved.
 

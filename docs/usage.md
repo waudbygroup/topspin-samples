@@ -1,12 +1,12 @@
 # Usage Guide
 
-This guide covers all features of Sample Manager. For a quick introduction, start with the [Quick Start Guide](../getting-started/quickstart.md).
+This guide covers all features of Sample Manager. For a quick introduction, start with the [Quick Start Guide](getting-started/quickstart.md).
 
 ## Main Interface
 
 Type `samples` in TopSpin to launch the GUI. The window opens and automatically navigates to your current dataset's directory.
 
-![Sample Manager window](../images/sample-catalogue.png)
+![Sample Manager window](images/sample-catalogue.png)
 
 The interface has directory navigation at the top, three tabs (Samples, Timeline, and Catalogue) in the middle, and action buttons at the bottom. The status bar shows the current directory, active sample status, and number of samples found.
 
@@ -22,11 +22,11 @@ Use "Browse..." to select any NMR data directory, or "Go to current dataset" to 
 
 **Catalogue Tab** - Shows all samples across your configured root directories with search and filtering capabilities. This provides a bird's-eye view of all samples in your data, making it easy to find specific samples or review entire experimental campaigns.
 
-![Sample Catalogue](../images/sample-catalogue.png)
+![Sample Catalogue](images/sample-catalogue.png)
 
 Configure root directories via the "Settings..." button to enable multi-directory browsing in the catalogue view.
 
-![Settings](../images/settings-root-directories.png)
+![Settings](images/settings-root-directories.png)
 
 ## Sample Management
 
@@ -54,7 +54,7 @@ Select an ejected sample and click "Delete" to permanently remove the JSON file.
 
 The Timeline tab shows a chronological view combining samples and experiments in the current directory.
 
-![Timeline View](../images/timeline.png)
+![Timeline View](images/timeline.png)
 
 Each row shows either a sample event (Created/Ejected) or an experiment with details like date/time, type, label, nucleus, and number of scans. Experiments are color-coded by dimensionality: black for 1D, blue for 2D, green for 3D+. Double-click any experiment to open that dataset in TopSpin.
 
@@ -64,13 +64,13 @@ The Holder column only appears when samples have different SampleJet rack positi
 
 Right-click in the timeline and select experiments to create a retrospective sample entry. This is useful when annotating old data or when you forgot to create a sample during acquisition.
 
-![Retrospective Sample Creation](../images/retrospective-sample-creation.png)
+![Retrospective Sample Creation](images/retrospective-sample-creation.png)
 
 ## The Sample Form
 
 When creating or editing samples, you'll see a form with several sections. All fields are optional.
 
-![Sample Form](../images/editing-sample-buffer.png)
+![Sample Form](images/editing-sample-buffer.png)
 
 **People** - Users and research groups working with the sample.
 

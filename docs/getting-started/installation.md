@@ -117,7 +117,7 @@ To update to the latest version of Sample Manager:
 Now that Sample Manager is installed, you're ready to start using it:
 
 - **[Quick Start Guide](quickstart.md)** - Learn the basic workflow
-- **[Usage Guide](../guide/usage.md)** - Explore all features in detail
+- **[Usage Guide](../usage.md)** - Explore all features in detail
 
 ## Multi-User Installations
 

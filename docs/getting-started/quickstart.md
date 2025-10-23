@@ -71,7 +71,7 @@ For similar samples, use the duplicate feature. Select an existing sample, click
 
 ## Next Steps
 
-Explore the [full usage guide](../guide/usage.md) for all features and detailed documentation.
+Explore the [full usage guide](../usage.md) for all features and detailed documentation.
 
 ---
 
