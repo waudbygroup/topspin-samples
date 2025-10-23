@@ -633,9 +633,9 @@ class SampleManagerApp:
 
         # Right side - repository link
         right_panel = JPanel(FlowLayout(FlowLayout.RIGHT))
-        repo_link = JLabel("<html><a href=''>View on GitHub</a></html>")
+        repo_link = JLabel("<html><a href=''>View Documentation...</a></html>")
         repo_link.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
-        repo_link.setToolTipText("https://github.com/waudbygroup/topspin-samples")
+        repo_link.setToolTipText("https://waudbylab.org/topspin-samples/")
 
         # Add click listener to open URL
         def open_repo(event):
@@ -645,7 +645,7 @@ class SampleManagerApp:
                 if Desktop.isDesktopSupported():
                     desktop = Desktop.getDesktop()
                     if desktop.isSupported(Desktop.Action.BROWSE):
-                        desktop.browse(URI("https://github.com/waudbygroup/topspin-samples"))
+                        desktop.browse(URI("https://waudbylab.org/topspin-samples/"))
             except Exception as e:
                 MSG("Could not open browser: %s" % str(e))
 

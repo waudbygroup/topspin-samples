@@ -8,21 +8,27 @@ Type `samples` in TopSpin to launch the GUI. The window opens and automatically 
 
 ![Sample Manager window](../images/sample-catalogue.png)
 
-The interface has directory navigation at the top, two tabs (Samples and Timeline) in the middle, and action buttons at the bottom. The status bar shows the current directory, active sample status, and number of samples found.
+The interface has directory navigation at the top, three tabs (Samples, Timeline, and Catalogue) in the middle, and action buttons at the bottom. The status bar shows the current directory, active sample status, and number of samples found.
 
 ## Directory Navigation
 
-Use "Browse..." to select any NMR data directory, or "Go to current dataset" to navigate to TopSpin's active dataset. The catalogue view shows all samples across your configured root directories with search and filtering capabilities.
+Use "Browse..." to select any NMR data directory, or "Go to current dataset" to navigate to TopSpin's active dataset.
+
+## Tabs
+
+**Samples Tab** - Displays all sample JSON files in the current directory, showing filename, status (ACTIVE or ejection time), sample label, and users. Click a sample to select it, activating the relevant action buttons.
+
+**Timeline Tab** - Shows a chronological view combining samples and experiments in the current directory (see Timeline View section below).
+
+**Catalogue Tab** - Shows all samples across your configured root directories with search and filtering capabilities. This provides a bird's-eye view of all samples in your data, making it easy to find specific samples or review entire experimental campaigns.
 
 ![Sample Catalogue](../images/sample-catalogue.png)
 
-Configure root directories via the "Settings..." button to enable multi-directory browsing.
+Configure root directories via the "Settings..." button to enable multi-directory browsing in the catalogue view.
 
 ![Settings](../images/settings-root-directories.png)
 
 ## Sample Management
-
-The Samples tab displays all sample JSON files in the current directory, showing filename, status (ACTIVE or ejection time), sample label, and users. Click a sample to select it, activating the relevant action buttons.
 
 ### Creating Samples
 
