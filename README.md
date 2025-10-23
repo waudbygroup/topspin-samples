@@ -25,9 +25,9 @@ The JSON schema used by this tool is maintained separately in the [nmr-sample-sc
 - **GUI Interface**: Java Swing-based interface with form-based metadata entry
 - **Timeline View**: Chronological visualization of samples and experiments
 - **Schema Validation**: JSON Schema-based validation ensures data consistency
-- **Version Control**: Schema versioning with migration support
 - **Auto-Navigation**: Automatically opens current dataset directory
 - **Sample Lifecycle**: Track sample creation, modification, and ejection timestamps
+- **Version Control**: Schema versioning ensures future-proofing
 
 ## Installation
 
