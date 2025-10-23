@@ -1,5 +1,7 @@
 # NMR Sample Manager for TopSpin
 
+[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://waudbygroup.github.io/topspin-samples/)
+
 A lightweight sample metadata management system for Bruker TopSpin, built with Jython and Java Swing.
 
 ![Screenshot - Sample editing](assets/screenshot.png)
