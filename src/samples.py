@@ -757,8 +757,13 @@ class SampleManagerApp:
             msg = ("Updates are available!\n\n"
                    "To update, run the following command in the installation directory:\n\n"
                    "git pull\n\n"
-                   "Installation directory: %s") % self.script_dir
-            MSG(msg)
+                   "Installation directory:\n%s") % self.script_dir
+            JOptionPane.showMessageDialog(
+                self.frame,
+                msg,
+                "Update Available",
+                JOptionPane.INFORMATION_MESSAGE
+            )
 
         class UpdateMouseAdapter(java.awt.event.MouseAdapter):
             def __init__(self, handler):
