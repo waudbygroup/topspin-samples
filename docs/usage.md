@@ -90,11 +90,21 @@ When creating or editing samples, you'll see a form with several sections. All f
 
 Sample Manager provides TopSpin commands for workflow integration:
 
-**`ija` (inject and annotate)** - Run when loading a new sample. Opens Sample Manager, creates a new sample form, navigates to current dataset, and auto-ejects any previous active sample.
+### Manual Mode
 
-**`eja` (eject and annotate)** - Run when removing a sample. Finds the active sample and adds an ejection timestamp.
+**`ija`** - Manual injection. Prompts for sample annotation when lowering sample (turns off lift air). Options include creating a new sample, duplicating the last sample, or skipping annotation. If a sample is already active, you can choose to keep it active or eject it first.
 
-These commands combine physical and metadata steps for seamless integration.
+**`eja`** - Manual ejection. Marks the active sample as ejected when raising sample (turns on lift air). Executes silently if no active sample exists.
+
+### Automated Mode (Sample Changer)
+
+**`sxa [position|ej]`** - Sample changer operations with annotation:
+- `sxa 15` - Load position 15 with optional annotation
+- `sxa ej` - Eject with automatic metadata update
+
+If no argument is provided, you'll be prompted to enter a position or `ej`.
+
+All commands show transparent prompts explaining both physical and metadata actions before execution.
 
 ## File Management
 
