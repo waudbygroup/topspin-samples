@@ -999,6 +999,123 @@ if curdata:
             pass
         return None
 
+    def _has_previous_samples(self):
+        """Check if there are any previous samples (for duplication)"""
+        if not self.current_directory:
+            return False
+
+        try:
+            sample_files = self.sample_io.list_sample_files(self.current_directory)
+            return len(sample_files) > 0
+        except:
+            return False
+
+    def _get_last_sample(self):
+        """Get the most recent sample (by creation time) for duplication"""
+        if not self.current_directory:
+            return None
+
+        try:
+            sample_files = self.sample_io.list_sample_files(self.current_directory)
+            if not sample_files:
+                return None
+
+            # Files are already sorted chronologically (newest last)
+            last_filename = sample_files[-1]
+            filepath = os.path.join(self.current_directory, last_filename)
+            data = self.sample_io.read_sample(filepath)
+
+            return {
+                'filename': last_filename,
+                'filepath': filepath,
+                'data': data
+            }
+        except:
+            return None
+
+    def _new_sample_with_timestamp(self, timestamp):
+        """Create new sample with a specific injection timestamp"""
+        # Set draft state first
+        self.current_sample_file = None
+        self.is_draft = True
+        self.draft_data = {'metadata': {'created_timestamp': timestamp.isoformat() + 'Z'}}
+        self.form_modified = False
+
+        # Update badge and refresh sample list to show draft
+        self._update_badge()
+        self._refresh_sample_list()
+
+        # Create fresh form generator using CURRENT schema for new samples
+        self.form_generator = SchemaFormGenerator(self.current_schema_path)
+
+        # Create empty form
+        self.form_panel.removeAll()
+        form_scroll = self.form_generator.create_form_panel(self)
+        self.form_panel.add(form_scroll, BorderLayout.CENTER)
+        self.form_panel.revalidate()
+        self.form_panel.repaint()
+
+        # Set button states
+        self.btn_save.setEnabled(False)
+        self.btn_cancel.setEnabled(True)
+
+        self.tabbed_pane.setSelectedIndex(0)  # Switch to Sample Details tab
+
+    def _duplicate_last_sample_with_timestamp(self, timestamp):
+        """Duplicate the last sample with a specific injection timestamp"""
+        last_sample = self._get_last_sample()
+        if not last_sample:
+            MSG("No previous samples to duplicate")
+            return
+
+        try:
+            data = last_sample['data']
+
+            # Append "(copy)" to label
+            if 'sample' in data and 'label' in data['sample']:
+                data['sample']['label'] = data['sample']['label'] + " (copy)"
+
+            # Set metadata timestamps
+            if 'metadata' not in data:
+                data['metadata'] = {}
+
+            data['metadata']['created_timestamp'] = timestamp.isoformat() + 'Z'
+            data['metadata'].pop('modified_timestamp', None)
+            data['metadata'].pop('ejected_timestamp', None)
+            data['metadata'].pop('schema_version', None)
+
+            # Set draft state first
+            self.current_sample_file = None
+            self.is_draft = True
+            self.draft_data = data
+            self.form_modified = False
+
+            # Update badge and refresh sample list to show draft
+            self._update_badge()
+            self._refresh_sample_list()
+
+            # Create fresh form generator using CURRENT schema for duplicates
+            self.form_generator = SchemaFormGenerator(self.current_schema_path)
+
+            # Create form first
+            self.form_panel.removeAll()
+            form_scroll = self.form_generator.create_form_panel(self)
+            self.form_panel.add(form_scroll, BorderLayout.CENTER)
+            self.form_panel.revalidate()
+            self.form_panel.repaint()
+
+            # Then populate with data
+            self.form_generator.load_data(data)
+
+            # Set button states
+            self.btn_save.setEnabled(False)
+            self.btn_cancel.setEnabled(True)
+
+            self.tabbed_pane.setSelectedIndex(0)  # Switch to Sample Details tab
+
+        except Exception as e:
+            MSG("Error duplicating sample: %s" % str(e))
+
     def _update_badge(self):
         """Update the badge to reflect current sample status"""
         if self.is_draft:
