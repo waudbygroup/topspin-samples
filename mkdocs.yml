@@ -69,12 +69,11 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Getting Started:
-    - Installation: getting-started/installation.md
-    - Quick Start: getting-started/quickstart.md
-  - Usage: usage.md
-  - Contributing: contributing.md
-  - Related Projects: related.md
+  - Installation: installation.md
+  - The Samples App: samples-app.md
+  - Physical Sample Handling: physical-sample-handling.md
+  - Ecosystem: related.md
+  - Help and Contributing: help-and-contributing.md
 
 extra:
   social:
