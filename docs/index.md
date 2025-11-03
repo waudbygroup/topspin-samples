@@ -11,6 +11,8 @@ Sample Manager provides:
 - A GUI application for viewing and searching sample history (launch with `samples` command)
 - Commands to inject and eject samples with parallel metadata annotation (`ija`, `eja`, and `sxa` commands)
 
+![Sample Catalogue](images/sample-catalogue.png)
+
 ## Why This Matters
 
 **Right now**: See what you've been running, organised by sample. Even without annotations, the timeline gives you a birds-eye view of your data.
@@ -31,12 +33,5 @@ Once installed, you'll immediately see your timeline. Start annotating samples w
 
 ## Learn More
 
-- [**The Samples App**](samples-app.md) - What you can do with the GUI (timeline, catalogue, search)
+- [**The Samples App**](samples-app.md) - What you can do with the app (timeline, catalogue, search)
 - [**Physical Sample Handling**](physical-sample-handling.md) - Workflow commands (`ija`, `eja`, `sxa`) that capture metadata during injection/ejection
-- [**Ecosystem**](related.md) - Web viewer for offline access, shared JSON schema for portability
-
----
-
-**Author**: Chris Waudby, UCL ([c.waudby@ucl.ac.uk](mailto:c.waudby@ucl.ac.uk))
-**Licence**: MIT (open source)
-**Repository**: [github.com/waudbygroup/topspin-samples](https://github.com/waudbygroup/topspin-samples)
