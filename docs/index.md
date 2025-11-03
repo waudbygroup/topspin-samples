@@ -1,5 +1,11 @@
 # NMR Sample Manager for TopSpin
 
+<!-- ![Sample Catalogue](images/sample-catalogue.png) -->
+<video width="100%" controls>
+  <source src="movies/topspin-samples.mp4" type="video/mp4">
+  Your browser doesn't support video playback.
+</video>
+
 ## The Problem
 
 NMR spectroscopy has excellent software for managing experiments, but sample tracking has always been a blind spot. When you return to old datasets months or years later, can you confidently answer what the protein concentration was, what buffer was used, or what isotopic labelling scheme was employed? Most NMR users rely on lab notebooks, inconsistent text files, or memory, which becomes a real problem when preparing data for repository submission, writing publications, or troubleshooting experiments.
@@ -9,9 +15,8 @@ NMR spectroscopy has excellent software for managing experiments, but sample tra
 Sample Manager provides:
 
 - A GUI application for viewing and searching sample history (launch with `samples` command)
-- Commands to inject and eject samples with parallel metadata annotation (`ija`, `eja`, and `sxa` commands)
+- Commands to inject and eject samples with parallel metadata annotation (`ija`, `eja` and `sxa` directly replace `ij`, `ej` and `sx` commands)
 
-![Sample Catalogue](images/sample-catalogue.png)
 
 ## Why This Matters
 
