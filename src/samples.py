@@ -530,22 +530,33 @@ class SampleManagerApp:
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10))
 
         # Top panel with buttons
-        top_panel = JPanel(FlowLayout(FlowLayout.LEFT))
+        top_panel = JPanel(BorderLayout())
+
+        # Left side: action buttons
+        left_panel = JPanel(FlowLayout(FlowLayout.LEFT))
 
         self.create_from_selection_btn = JButton("Create retrospective sample from selection")
         self.create_from_selection_btn.setEnabled(False)
         self.create_from_selection_btn.addActionListener(lambda e: self._create_sample_from_experiments())
-        top_panel.add(self.create_from_selection_btn)
+        left_panel.add(self.create_from_selection_btn)
 
         self.view_sample_btn = JButton("View/edit sample")
         self.view_sample_btn.setEnabled(False)
         self.view_sample_btn.addActionListener(lambda e: self._view_sample_from_timeline())
-        top_panel.add(self.view_sample_btn)
+        left_panel.add(self.view_sample_btn)
 
         self.open_experiment_btn = JButton("Open experiment in Topspin")
         self.open_experiment_btn.setEnabled(False)
         self.open_experiment_btn.addActionListener(lambda e: self._open_experiment_from_timeline())
-        top_panel.add(self.open_experiment_btn)
+        left_panel.add(self.open_experiment_btn)
+
+        top_panel.add(left_panel, BorderLayout.WEST)
+
+        # Right side: refresh button
+        right_panel = JPanel(FlowLayout(FlowLayout.RIGHT))
+        btn_refresh = JButton('Refresh', actionPerformed=lambda e: self._refresh_timeline())
+        right_panel.add(btn_refresh)
+        top_panel.add(right_panel, BorderLayout.EAST)
 
         panel.add(top_panel, BorderLayout.NORTH)
 
