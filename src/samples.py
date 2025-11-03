@@ -2090,8 +2090,16 @@ if curdata:
             current_sample_filepath = None
             current_holder = None
             current_sample_color_index = 0  # Track color index for alternating
+            sample_was_ejected = False
 
             for entry in entries:
+                toggle = False
+
+                # Check if we need to toggle due to previous ejection
+                if sample_was_ejected:
+                    toggle = True
+                    sample_was_ejected = False
+
                 # Convert UTC timestamp to local time for display
                 import calendar
                 import time
@@ -2124,36 +2132,37 @@ if curdata:
 
                 timestamp_str = "%s %d %s %d, %d.%02d %s" % (day_name, day, month, year, hour_12, minute, am_pm)
 
-                # Determine display name and track sample/holder changes for coloring
-                # Use row_sample_filepath for this specific row (might differ from current_sample_filepath)
+                                # Determine display name and sample filepath for this row
                 row_sample_filepath = current_sample_filepath
-                row_color_index = current_sample_color_index
-
+                
                 if entry.entry_type == 'sample_created':
                     display_name = entry.name
-                    # New sample - toggle color if this is a different sample
+                    # Toggle if different sample
                     if current_sample_filepath != entry.filepath:
-                        current_sample_color_index = 1 - current_sample_color_index
-                        row_color_index = current_sample_color_index
-                    current_sample_filepath = entry.filepath
+                        toggle = True
                     row_sample_filepath = entry.filepath
+                    current_sample_filepath = entry.filepath
                 elif entry.entry_type == 'sample_ejected':
                     display_name = "sample ejected"
-                    # Ejection event: use current sample for THIS row
+                    # Ejection event uses current sample colour for this row
                     row_sample_filepath = current_sample_filepath
-                    row_color_index = current_sample_color_index
-                    # But clear it for subsequent rows and toggle color
+                    # Set flag so next row gets new colour
+                    sample_was_ejected = True
                     current_sample_filepath = None
-                    current_sample_color_index = 1 - current_sample_color_index
                 elif entry.entry_type == 'experiment':
                     display_name = "Exp %s" % entry.name
                     # If no samples defined, use holder for color alternation
                     if not has_samples and show_holder and entry.holder is not None:
                         if current_holder != entry.holder:
-                            current_sample_color_index = 1 - current_sample_color_index
+                            toggle = True
                             current_holder = entry.holder
                 else:
                     display_name = entry.name
+
+                # Apply toggle after all decision logic
+                if toggle:
+                    current_sample_color_index = 1 - current_sample_color_index
+
 
                 # Extract just pulse program name from details (no nuclei, no scans)
                 details = entry.details
@@ -2172,7 +2181,7 @@ if curdata:
                     'details': details,
                     'entry': entry,
                     'sample_filepath': row_sample_filepath,  # For highlighting
-                    'color_index': row_color_index,  # For consistent coloring
+                    'color_index': current_sample_color_index,  # For consistent coloring
                     'parmod': entry.parmod if entry.entry_type == 'experiment' else None  # For dimensionality coloring
                 })
 
