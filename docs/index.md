@@ -4,13 +4,13 @@
 
 NMR spectroscopy has excellent software for managing experiments, but sample tracking has always been a blind spot. When you return to old datasets months or years later, can you confidently answer what the protein concentration was, what buffer was used, or what isotopic labelling scheme was employed? Most NMR users rely on lab notebooks, inconsistent text files, or memory, which becomes a real problem when preparing data for repository submission, writing publications, or troubleshooting experiments.
 
-## Here's What You're Missing
+## What It Does
 
 ![Timeline View](images/timeline.png)
 
-This is the **timeline view** - all your experiments organised by sample. Each coloured row is an NMR experiment (black = 1D, blue = 2D, green = 3D+). The red markers show when samples were created and ejected. Click any experiment to open it in TopSpin.
+The timeline view shows all your experiments organised chronologically. Each coloured row is an NMR experiment (black = 1D, blue = 2D, green = 3D+). Sample annotations appear as events showing when samples were created and ejected. Click any experiment to open it in TopSpin.
 
-Even if you've never annotated a single sample, the timeline shows you everything you've been running. Add annotations and you get searchable metadata: concentrations, buffer compositions, isotopic labelling, tube types, lab book references.
+Even without annotations, the timeline gives you a birds-eye view of your data. Add sample annotations and you get searchable metadata: concentrations, buffer compositions, isotopic labelling, tube types, lab book references.
 
 ## Why This Matters
 
