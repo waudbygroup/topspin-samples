@@ -166,7 +166,8 @@ class TimelineBuilder:
                                 # If we couldn't extract timestamp from file, fall back to mtime
                                 if dt is None:
                                     mtime = os.path.getmtime(acqus_path)
-                                    dt = datetime.fromtimestamp(mtime)
+                                    # Convert to naive UTC datetime for consistency with other timestamps
+                                    dt = datetime.utcfromtimestamp(mtime)
 
                                 # Try to get experiment details, holder, and parmod from acqus
                                 exp_details, holder, parmod = self._parse_acqus_info(acqus_path)
