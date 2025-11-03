@@ -808,14 +808,15 @@ import os
 curdata = CURDATA()
 if curdata:
     name = curdata[0]
+    expno = str(curdata[1])  # Experiment number
     directory = curdata[3]
     # Navigate to the dataset directory (parent of expno folders)
     full_path = os.path.join(directory, name)
-    # Get the app and set directory
+    # Get the app and set directory with expno for auto-selection
     from java.lang import System
     app = System.getProperties().get("org.waudbylab.topspin-sample-manager")
     if app:
-        app.set_directory(full_path)
+        app.set_directory(full_path, expno)
 ''')
         except Exception as e:
             self.update_status("Could not navigate to CURDATA: %s" % str(e))
@@ -833,8 +834,14 @@ if curdata:
             selected_dir = chooser.getSelectedFile().getAbsolutePath()
             self.set_directory(selected_dir)
 
-    def set_directory(self, directory, auto_select=True):
-        """Set current directory and refresh sample list"""
+    def set_directory(self, directory, expno=None, auto_select=True):
+        """Set current directory and refresh sample list
+
+        Args:
+            directory: Directory path to navigate to
+            expno: Optional experiment number (as string) for auto-selection
+            auto_select: Whether to auto-select a sample
+        """
         self.current_directory = directory
 
         # Show only last two directory components for cleaner display
@@ -853,35 +860,45 @@ if curdata:
 
         # Auto-select appropriate sample if requested
         if auto_select:
-            self._auto_select_sample_for_directory()
+            self._auto_select_sample_for_directory(expno)
 
         self.update_status("Directory: %s" % directory)
 
-    def _auto_select_sample_for_directory(self):
+    def _auto_select_sample_for_directory(self, expno=None):
         """Auto-select the sample associated with current experiment via timeline or timestamp
 
-        If in an experiment directory (expno), selects the sample that was active during that experiment.
-        If in a parent directory, selects the active sample or most recently created/modified sample.
+        Args:
+            expno: Optional experiment number (as string) for sample selection
+
+        If expno is provided, selects the sample that was active during that experiment.
+        If expno is None, selects the active sample or most recently created/modified sample.
         """
+        print("DEBUG: _auto_select_sample_for_directory called with expno=%s" % expno)
+
         if not self.current_directory:
+            print("DEBUG: No current directory, returning")
             return
 
         try:
-            # Try to get current experiment number from directory path
-            # Directory structure: /path/to/data/experimentName/expno
-            expno = None
-            try:
-                # Extract experiment number from directory name
-                dir_parts = self.current_directory.split(os.sep)
-                expno_str = dir_parts[-1]  # Last part should be expno
-                expno = int(expno_str)
-            except (ValueError, IndexError):
-                # Not in an expno directory - select active sample or most recent
+            # Convert expno from string to int if provided
+            if expno is not None:
+                try:
+                    expno = int(expno)
+                    print("DEBUG: Converted expno to int: %d" % expno)
+                except (ValueError, TypeError):
+                    print("DEBUG: Invalid expno, falling back to active/recent")
+                    # Invalid expno - select active sample or most recent
+                    self._select_active_or_recent_sample()
+                    return
+            else:
+                print("DEBUG: No expno provided, falling back to active/recent")
+                # No expno provided - select active sample or most recent
                 self._select_active_or_recent_sample()
                 return
 
             # Build timeline to find which sample was active during this experiment
             entries = self.timeline_builder.build_timeline(self.current_directory)
+            print("DEBUG: Built timeline with %d entries" % len(entries))
 
             # Find the sample that was active when this experiment was run
             # Timeline is sorted chronologically, so we look for:
@@ -895,61 +912,85 @@ if curdata:
                 if entry.entry_type == 'sample_created':
                     # New sample became active
                     current_sample_filepath = entry.filepath
+                    print("DEBUG: Sample created: %s" % entry.filepath)
                 elif entry.entry_type == 'sample_ejected':
                     # Sample was ejected, no longer active
+                    print("DEBUG: Sample ejected: %s" % current_sample_filepath)
                     current_sample_filepath = None
                 elif entry.entry_type == 'experiment':
                     # Check if this is our target experiment
                     try:
                         entry_expno = int(entry.name)
+                        print("DEBUG: Found experiment %d (looking for %d)" % (entry_expno, expno))
                         if entry_expno == expno:
                             # This is the experiment we want
                             # The current_sample_filepath is the sample that was active
                             best_sample_filepath = current_sample_filepath
+                            print("DEBUG: Found target experiment! Best sample: %s" % best_sample_filepath)
                             break
                     except (ValueError, AttributeError):
                         continue
 
             # Find this sample in the table and select it
             if best_sample_filepath:
+                print("DEBUG: Looking for sample in table: %s" % best_sample_filepath)
                 sample_files = self.sample_io.list_sample_files(self.current_directory)
                 for idx, filename in enumerate(sample_files):
                     filepath = os.path.join(self.current_directory, filename)
                     if filepath == best_sample_filepath:
+                        print("DEBUG: Found sample at index %d, selecting..." % idx)
                         self.sample_table.setRowSelectionInterval(idx, idx)
                         # Scroll to make it visible
                         self.sample_table.scrollRectToVisible(
                             self.sample_table.getCellRect(idx, 0, True)
                         )
+                        # IMPORTANT: Actually load and display the sample
+                        self._on_sample_selected()
+                        print("DEBUG: Sample selected and loaded")
                         break
+            else:
+                print("DEBUG: No best_sample_filepath found")
 
         except Exception as e:
             # Silently fail - auto-selection is a convenience feature
+            print("DEBUG: Exception in _auto_select_sample_for_directory: %s" % str(e))
             pass
 
     def _select_active_or_recent_sample(self):
         """Select the active sample, or if none, the most recently created/modified sample"""
+        print("DEBUG: _select_active_or_recent_sample called")
+
         if not self.current_directory:
+            print("DEBUG: No current directory")
             return
 
         try:
             sample_files = self.sample_io.list_sample_files(self.current_directory)
+            print("DEBUG: Found %d sample files" % len(sample_files))
+
             if not sample_files:
+                print("DEBUG: No sample files found")
                 return
 
             # First, look for an active (loaded) sample
             for idx, filename in enumerate(sample_files):
                 filepath = os.path.join(self.current_directory, filename)
                 status = self.sample_io.get_sample_status(filepath)
+                print("DEBUG: Sample %d (%s) has status: %s" % (idx, filename, status))
                 if status == 'loaded':
+                    print("DEBUG: Found loaded sample at index %d, selecting..." % idx)
                     self.sample_table.setRowSelectionInterval(idx, idx)
                     self.sample_table.scrollRectToVisible(
                         self.sample_table.getCellRect(idx, 0, True)
                     )
+                    # IMPORTANT: Actually load and display the sample
+                    self._on_sample_selected()
+                    print("DEBUG: Loaded sample selected and displayed")
                     return
 
             # No active sample - select the most recent by timestamp
             # Find sample with most recent created or modified timestamp
+            print("DEBUG: No loaded sample found, looking for most recent")
             most_recent_idx = 0
             most_recent_time = None
 
@@ -967,13 +1008,20 @@ if curdata:
 
             # Select the most recent sample
             if most_recent_time is not None:
+                print("DEBUG: Most recent sample is at index %d, selecting..." % most_recent_idx)
                 self.sample_table.setRowSelectionInterval(most_recent_idx, most_recent_idx)
                 self.sample_table.scrollRectToVisible(
                     self.sample_table.getCellRect(most_recent_idx, 0, True)
                 )
+                # IMPORTANT: Actually load and display the sample
+                self._on_sample_selected()
+                print("DEBUG: Most recent sample selected and displayed")
+            else:
+                print("DEBUG: No timestamped samples found")
 
         except Exception as e:
             # Silently fail - auto-selection is a convenience feature
+            print("DEBUG: Exception in _select_active_or_recent_sample: %s" % str(e))
             pass
 
     def _get_active_sample(self):
