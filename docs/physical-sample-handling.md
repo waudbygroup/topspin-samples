@@ -6,6 +6,11 @@ These commands combine sample injection and ejection with metadata capture. If y
 
 When you physically load a sample into the magnet, you create a sample annotation. When you remove it, you close the annotation. All experiments run in between are associated with that sample.
 
+![Workflow diagram](images/block-diagram.png)
+
+*One sample annotation spans multiple experiments. Top: Manual injection/ejection workflow. Bottom: SampleJet automated sample changer workflow.*
+
+<!--
 ```mermaid
 block
   columns 11
@@ -49,8 +54,7 @@ block
   classDef red fill:#ffeeee
   class I1,I2,E1,E2,sx1,sx2,sx3 red
 ```
-
-*One sample annotation spans multiple experiments. Top: Manual injection/ejection workflow. Bottom: SampleJet automated sample changer workflow.*
+-->
 
 ## The Commands
 

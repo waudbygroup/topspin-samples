@@ -6,11 +6,10 @@ NMR spectroscopy has excellent software for managing experiments, but sample tra
 
 ## What It Does
 
-![Timeline View](images/timeline.png)
+Sample Manager provides:
 
-The timeline view shows all your experiments organised chronologically. Each coloured row is an NMR experiment (black = 1D, blue = 2D, green = 3D+). Sample annotations appear as events showing when samples were created and ejected. Click any experiment to open it in TopSpin.
-
-Even without annotations, the timeline gives you a birds-eye view of your data. Add sample annotations and you get searchable metadata: concentrations, buffer compositions, isotopic labelling, tube types, lab book references.
+- A GUI application for viewing and searching sample history (launch with `samples` command)
+- Commands to inject and eject samples with parallel metadata annotation (`ija`, `eja`, and `sxa` commands)
 
 ## Why This Matters
 
