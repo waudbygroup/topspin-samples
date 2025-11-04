@@ -33,6 +33,7 @@ from schema_form import SchemaFormGenerator
 from timeline import TimelineBuilder
 from config_manager import ConfigManager
 from sample_scanner import SampleScanner
+from html_view import HTMLViewGenerator
 
 APP_KEY = "org.waudbylab.topspin-sample-manager"
 
@@ -114,6 +115,11 @@ class SampleManagerApp:
         self.btn_delete.setEnabled(False)
         self.btn_save.setEnabled(False)
         self.btn_cancel.setEnabled(False)
+
+        # Set initial button visibility - hide Save/Cancel/Edit initially
+        self.btn_save.setVisible(False)
+        self.btn_cancel.setVisible(False)
+        self.btn_edit.setVisible(False)
 
     def mark_form_modified(self):
         """Mark form as modified and enable Save/Cancel buttons"""
@@ -1429,8 +1435,13 @@ if curdata:
         self.form_panel.revalidate()
         self.form_panel.repaint()
 
+        # Hide all action buttons in placeholder view
+        self.btn_save.setVisible(False)
+        self.btn_cancel.setVisible(False)
+        self.btn_edit.setVisible(False)
+
     def _show_sample_readonly(self, filename):
-        """Show sample data in read-only view"""
+        """Show sample data in read-only HTML view"""
         if not self.current_directory:
             return
 
@@ -1452,27 +1463,42 @@ if curdata:
                 self.update_status("Cannot display sample - schema v%s not found" % schema_version)
                 return
 
-            # Create form generator
-            self.form_generator = SchemaFormGenerator(schema_path)
+            # Create HTML view generator
+            html_generator = HTMLViewGenerator(schema_path)
+            html_content = html_generator.generate_html(data)
 
-            # Create form panel
+            # Create JEditorPane to display HTML
+            editor_pane = JEditorPane('text/html', html_content)
+            editor_pane.setEditable(False)
+            editor_pane.setCaretPosition(0)  # Reset to top
+
+            # Clear form panel and add HTML view
             self.form_panel.removeAll()
-            form_scroll = self.form_generator.create_form_panel(None)  # No app ref = no modification tracking
-            self.form_panel.add(form_scroll, BorderLayout.CENTER)
-
-            # Load data
-            self.form_generator.load_data(data)
-
-            # Disable all form components (make read-only)
-            self._disable_form_components(form_scroll)
+            scroll_pane = JScrollPane(editor_pane)
+            scroll_pane.getVerticalScrollBar().setUnitIncrement(16)
+            scroll_pane.getVerticalScrollBar().setBlockIncrement(50)
+            self.form_panel.add(scroll_pane, BorderLayout.CENTER)
 
             self.form_panel.revalidate()
             self.form_panel.repaint()
 
-            self.update_status("Viewing sample: %s (read-only)" % filename)
+            # Reset scroll position to top after rendering
+            from javax.swing import SwingUtilities
+            SwingUtilities.invokeLater(lambda: scroll_pane.getVerticalScrollBar().setValue(0))
+
+            # Hide Save/Cancel buttons, show Edit button in view mode
+            self.btn_save.setVisible(False)
+            self.btn_cancel.setVisible(False)
+            self.btn_edit.setVisible(True)
+
+            self.update_status("Viewing sample: %s" % filename)
 
         except Exception as e:
-            self.update_status("Error loading sample: %s" % str(e))
+            import traceback
+            error_msg = "Error loading sample: %s" % str(e)
+            self.update_status(error_msg)
+            # Print full traceback for debugging
+            traceback.print_exc()
 
     def _disable_form_components(self, component):
         """Recursively disable all input components in a container"""
@@ -1532,6 +1558,11 @@ if curdata:
             self.btn_save.setEnabled(False)
             self.btn_cancel.setEnabled(True)  # Allow canceling edit mode
 
+            # Show Save/Cancel buttons, hide Edit button in edit mode
+            self.btn_save.setVisible(True)
+            self.btn_cancel.setVisible(True)
+            self.btn_edit.setVisible(False)
+
             self.update_status("Loaded sample: %s (schema v%s)" % (filename, schema_version))
 
         except Exception as e:
@@ -1584,6 +1615,11 @@ if curdata:
         # Set button states
         self.btn_save.setEnabled(False)
         self.btn_cancel.setEnabled(True)  # Enable cancel for drafts
+
+        # Show Save/Cancel buttons, hide Edit button when creating new
+        self.btn_save.setVisible(True)
+        self.btn_cancel.setVisible(True)
+        self.btn_edit.setVisible(False)
 
         self.tabbed_pane.setSelectedIndex(0)  # Switch to Sample Details tab
         self.update_status("Creating new sample (draft)")
@@ -1658,6 +1694,11 @@ if curdata:
             # Set button states
             self.btn_save.setEnabled(False)
             self.btn_cancel.setEnabled(True)  # Enable cancel for drafts
+
+            # Show Save/Cancel buttons, hide Edit button when duplicating
+            self.btn_save.setVisible(True)
+            self.btn_cancel.setVisible(True)
+            self.btn_edit.setVisible(False)
 
             self.tabbed_pane.setSelectedIndex(0)  # Switch to Sample Details tab
             self.update_status("Duplicating sample (draft)")
@@ -2115,6 +2156,11 @@ if curdata:
             self.btn_delete.setEnabled(False)
             self.btn_save.setEnabled(False)
             self.btn_cancel.setEnabled(True)
+
+            # Show Save/Cancel buttons, hide Edit button when duplicating from catalogue
+            self.btn_save.setVisible(True)
+            self.btn_cancel.setVisible(True)
+            self.btn_edit.setVisible(False)
 
             # Switch to Sample Details tab
             self.tabbed_pane.setSelectedIndex(0)
