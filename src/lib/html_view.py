@@ -69,34 +69,50 @@ class HTMLViewGenerator:
 body {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 12px;
-    margin: 12px;
+    margin: 10px;
     background-color: white;
 }
 
-/* Section headers */
-h2 {
-    color: %(primary)s;
-    font-size: 15px;
-    font-weight: bold;
-    margin-top: 18px;
-    margin-bottom: 10px;
-    padding-bottom: 4px;
-    border-bottom: 2px solid %(accent)s;
+/* Section container - two column layout */
+.section-container {
+    margin: 8px 0px;
+    border-bottom: 1px solid %(border)s;
+    padding-bottom: 8px;
 }
 
+.section-container:last-child {
+    border-bottom: none;
+}
+
+/* Section header on left */
+.section-header {
+    color: %(primary)s;
+    font-size: 12px;
+    font-weight: bold;
+    width: 120px;
+    float: left;
+    padding-top: 2px;
+}
+
+/* Section content on right */
+.section-content {
+    margin-left: 130px;
+}
+
+/* Subsection headers (e.g., Components) */
 h3 {
     color: %(secondary)s;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: bold;
-    margin-top: 12px;
-    margin-bottom: 6px;
+    margin-top: 6px;
+    margin-bottom: 3px;
 }
 
 /* Tables for arrays */
 table {
     width: 100%%;
     border-collapse: collapse;
-    margin: 10px 0px;
+    margin: 4px 0px;
     background-color: white;
 }
 
@@ -104,15 +120,15 @@ th {
     background-color: %(accent)s;
     color: white;
     font-weight: bold;
-    padding: 8px;
+    padding: 4px 6px;
     text-align: left;
-    font-size: 11px;
+    font-size: 12px;
 }
 
 td {
-    padding: 8px;
+    padding: 3px 6px;
     border-bottom: 1px solid %(border)s;
-    font-size: 11px;
+    font-size: 12px;
 }
 
 tr:last-child td {
@@ -121,50 +137,74 @@ tr:last-child td {
 
 /* Key-value pairs */
 .field-row {
-    margin: 5px 0px;
-    padding: 3px 0px;
+    margin: 2px 0px;
+    padding: 0px;
 }
 
 .field-label {
     color: %(muted)s;
     font-weight: bold;
+    font-size: 12px;
 }
 
 .field-value {
     color: black;
-    margin-left: 15px;
+    margin-left: 8px;
+    font-size: 12px;
 }
 
 /* Special sections */
-.metadata-box {
+.metadata-container {
     background-color: %(metadata)s;
-    padding: 10px;
-    margin: 10px 0px;
-    border-left: 4px solid %(warning)s;
+    padding: 8px 8px 8px 0px;
+    margin: 8px 0px;
+    border-left: 3px solid %(warning)s;
 }
 
-.notes-box {
+.metadata-container .section-header {
+    padding-left: 8px;
+}
+
+.metadata-container .section-content {
+    margin-left: 130px;
+}
+
+.notes-container {
     background-color: %(background)s;
-    padding: 10px;
-    margin: 10px 0px;
-    border-left: 4px solid %(accent)s;
+    padding: 8px 8px 8px 0px;
+    margin: 8px 0px;
+    border-left: 3px solid %(accent)s;
     font-style: italic;
+}
+
+.notes-container .section-header {
+    padding-left: 8px;
+}
+
+.notes-container .section-content {
+    margin-left: 130px;
 }
 
 /* Lists */
 ul {
-    margin: 8px 0px;
-    padding-left: 25px;
+    margin: 3px 0px;
+    padding-left: 18px;
 }
 
 li {
-    margin: 4px 0px;
+    margin: 1px 0px;
 }
 
 .empty-message {
     color: #999999;
     font-style: italic;
-    margin-left: 15px;
+    margin-left: 8px;
+    font-size: 10px;
+}
+
+/* Clear floats */
+.clear {
+    clear: both;
 }
 
 </style>
@@ -191,7 +231,10 @@ li {
         if prop_name == 'notes' and is_string:
             return self._render_notes_section(title, value)
 
-        html = '<h2>%s</h2>\n' % self._escape_html(title)
+        # Two-column layout: header on left, content on right
+        html = '<div class="section-container">\n'
+        html += '<div class="section-header">%s</div>\n' % self._escape_html(title)
+        html += '<div class="section-content">\n'
 
         if prop_type == 'object':
             # Object with properties
@@ -211,6 +254,10 @@ li {
         elif prop_type == 'string':
             # Simple string field
             html += '<div class="field-value">%s</div>\n' % self._escape_html(value)
+
+        html += '</div>\n'  # Close section-content
+        html += '<div class="clear"></div>\n'  # Clear float
+        html += '</div>\n'  # Close section-container
 
         return html
 
@@ -236,7 +283,8 @@ li {
                 # Nested array (e.g., Sample.Components, Buffer.Components)
                 items_schema = prop_schema.get('items', {})
                 if items_schema.get('type') == 'object':
-                    html += '<h3>%s</h3>\n' % self._escape_html(title)
+                    # Skip the h3 header for Components - table is self-explanatory
+                    # Just render the table directly
                     html += self._render_object_array(items_schema, value)
                 elif items_schema.get('type') == 'string':
                     html += '<div class="field-row">\n'
@@ -334,8 +382,9 @@ li {
 
     def _render_metadata_section(self, title, schema, data):
         """Render metadata in special styled box"""
-        html = '<div class="metadata-box">\n'
-        html += '<h2 style="margin-top: 0; border-bottom: none;">%s</h2>\n' % self._escape_html(title)
+        html = '<div class="metadata-container">\n'
+        html += '<div class="section-header" style="color: %s;">%s</div>\n' % (self.colors['warning'], self._escape_html(title))
+        html += '<div class="section-content">\n'
 
         properties = schema.get('properties', OrderedDict())
         for prop_name, prop_schema in properties.items():
@@ -354,7 +403,9 @@ li {
 
             html += self._render_field(label, value)
 
-        html += '</div>\n'
+        html += '</div>\n'  # Close section-content
+        html += '<div class="clear"></div>\n'  # Clear float
+        html += '</div>\n'  # Close metadata-container
         return html
 
     def _render_notes_section(self, title, notes_text):
@@ -362,12 +413,15 @@ li {
         if not notes_text or notes_text.strip() == '':
             return ''
 
-        html = '<h2>%s</h2>\n' % self._escape_html(title)
-        html += '<div class="notes-box">\n'
+        html = '<div class="notes-container">\n'
+        html += '<div class="section-header">%s</div>\n' % self._escape_html(title)
+        html += '<div class="section-content">\n'
         # Preserve line breaks in notes
         formatted_notes = self._escape_html(notes_text).replace('\n', '<br>\n')
         html += formatted_notes
-        html += '</div>\n'
+        html += '</div>\n'  # Close section-content
+        html += '<div class="clear"></div>\n'  # Clear float
+        html += '</div>\n'  # Close notes-container
         return html
 
     def _format_timestamp(self, timestamp_str):
