@@ -21,9 +21,7 @@ The timeline shows all your experiments in chronological order, colour-coded by 
 
 ![Timeline View](images/timeline.png)
 
-**Value without annotations**: Even if you've never created a single sample annotation, the timeline gives you a birds-eye view of what you've been running. You can see experiment types, nuclei, number of scans, and when each dataset was created.
-
-**Value with annotations**: Sample events appear as red markers showing when samples were created and ejected. Each experiment is associated with a sample, making it easy to see which buffer conditions or protein batches were used for which data.
+Even if you've never created sample annotations, the timeline gives you a view of what you've been running. You can see experiment types and when each dataset was created. If you have defined samples, then experiments are clearly associated with this in the timeline.
 
 **Special feature for SampleJet users**: Holder positions from your experiments automatically appear in the Holder column, even without any sample annotations. The system reads the SampleJet position from experiment parameters and displays it in the timeline.
 
@@ -40,21 +38,21 @@ Right-click in the timeline and select the experiments that correspond to a sing
 - Created timestamp = time of first selected experiment
 - Ejected timestamp = time of last selected experiment
 
-Fill in the form with your sample details and save. The annotation appears in the timeline as if you'd created it at the time. This is your safety net - you can always go back and document what you did.
+Fill in the form with your sample details and save. The annotation appears in the timeline as if you'd created it at the time.
 
 ## Catalogue View
 
-The catalogue shows all samples across your configured root directories, with search and filtering capabilities.
+The catalogue shows all samples across your configured root directories, with search capabilities.
 
 ![Sample Catalogue](images/sample-catalogue.png)
 
 **Use cases**:
 
-- "Find that sample where I used 50 mM phosphate buffer last summer"
-- "Show me all samples that Chris worked on in September"
-- "Which samples used 15N-labelled ubiquitin from batch 2024-03?"
+- "Find that sample where I used HEPES buffer last summer"
+- "Show me all samples that Chris worked on in 2024"
+- "Which samples used 15N-labelled ubiquitin?"
 
-**Filtering**: Filter by users, date ranges, sample components, buffer compositions, or any text in the sample label or notes.
+**Filtering**: Filter by users, sample components, buffer compositions, or any text in the sample label or notes.
 
 **Setup**: Configure root directories via Settings to enable multi-directory browsing. The catalogue scans all configured directories and builds a searchable index.
 
@@ -119,12 +117,6 @@ This is a destructive operation with no undo. The sample metadata is lost, but e
 Use "Browse..." to select any NMR data directory. The app scans the directory for sample JSON files and experiment folders, then updates all three tabs.
 
 Use "Go to current dataset" to navigate to TopSpin's currently active dataset directory. This is useful after switching datasets in TopSpin.
-
-## Application Persistence
-
-Sample Manager uses a persistent singleton pattern. Running `samples` multiple times doesn't create new windows - it brings the existing window to front. The application maintains state across invocations, clearing only when you restart TopSpin.
-
-Close the window to hide it while preserving state. Open it again by typing `samples`.
 
 ## File Storage
 
