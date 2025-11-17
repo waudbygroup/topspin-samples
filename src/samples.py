@@ -86,6 +86,8 @@ class SampleManagerApp:
         self.timeline_table = None
         self.timeline_table_model = None
         self.create_from_selection_btn = None
+        self.reassign_prev_btn = None
+        self.reassign_next_btn = None
         self.view_sample_btn = None
         self.open_experiment_btn = None
         self.tabbed_pane = None
@@ -116,10 +118,10 @@ class SampleManagerApp:
         self.btn_save.setEnabled(False)
         self.btn_cancel.setEnabled(False)
 
-        # Set initial button visibility - hide Save/Cancel/Edit initially
+        # Set initial button visibility - hide Save/Cancel initially, disable Edit
         self.btn_save.setVisible(False)
         self.btn_cancel.setVisible(False)
-        self.btn_edit.setVisible(False)
+        self.btn_edit.setEnabled(False)
 
     def mark_form_modified(self):
         """Mark form as modified and enable Save/Cancel buttons"""
@@ -535,16 +537,11 @@ class SampleManagerApp:
         panel = JPanel(BorderLayout())
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10))
 
-        # Top panel with buttons
+        # Top panel with utility buttons
         top_panel = JPanel(BorderLayout())
 
-        # Left side: action buttons
+        # Left side: view/edit buttons
         left_panel = JPanel(FlowLayout(FlowLayout.LEFT))
-
-        self.create_from_selection_btn = JButton("Create retrospective sample from selection")
-        self.create_from_selection_btn.setEnabled(False)
-        self.create_from_selection_btn.addActionListener(lambda e: self._create_sample_from_experiments())
-        left_panel.add(self.create_from_selection_btn)
 
         self.view_sample_btn = JButton("View/edit sample")
         self.view_sample_btn.setEnabled(False)
@@ -587,6 +584,26 @@ class SampleManagerApp:
 
         scroll_pane = JScrollPane(self.timeline_table)
         panel.add(scroll_pane, BorderLayout.CENTER)
+
+        # Bottom panel with reassignment action buttons
+        bottom_panel = JPanel(FlowLayout(FlowLayout.LEFT))
+
+        self.create_from_selection_btn = JButton("Create sample from selection")
+        self.create_from_selection_btn.setEnabled(False)
+        self.create_from_selection_btn.addActionListener(lambda e: self._create_sample_from_experiments())
+        bottom_panel.add(self.create_from_selection_btn)
+
+        self.reassign_prev_btn = JButton("Reassign to previous sample")
+        self.reassign_prev_btn.setEnabled(False)
+        self.reassign_prev_btn.addActionListener(lambda e: self._reassign_to_previous_sample())
+        bottom_panel.add(self.reassign_prev_btn)
+
+        self.reassign_next_btn = JButton("Reassign to next sample")
+        self.reassign_next_btn.setEnabled(False)
+        self.reassign_next_btn.addActionListener(lambda e: self._reassign_to_next_sample())
+        bottom_panel.add(self.reassign_next_btn)
+
+        panel.add(bottom_panel, BorderLayout.SOUTH)
 
         return panel
 
@@ -1438,7 +1455,7 @@ if curdata:
         # Hide all action buttons in placeholder view
         self.btn_save.setVisible(False)
         self.btn_cancel.setVisible(False)
-        self.btn_edit.setVisible(False)
+        self.btn_edit.setEnabled(False)
 
     def _show_sample_readonly(self, filename):
         """Show sample data in read-only HTML view"""
@@ -1489,7 +1506,7 @@ if curdata:
             # Hide Save/Cancel buttons, show Edit button in view mode
             self.btn_save.setVisible(False)
             self.btn_cancel.setVisible(False)
-            self.btn_edit.setVisible(True)
+            self.btn_edit.setEnabled(True)
 
             self.update_status("Viewing sample: %s" % filename)
 
@@ -1561,7 +1578,7 @@ if curdata:
             # Show Save/Cancel buttons, hide Edit button in edit mode
             self.btn_save.setVisible(True)
             self.btn_cancel.setVisible(True)
-            self.btn_edit.setVisible(False)
+            self.btn_edit.setEnabled(False)
 
             self.update_status("Loaded sample: %s (schema v%s)" % (filename, schema_version))
 
@@ -1619,7 +1636,7 @@ if curdata:
         # Show Save/Cancel buttons, hide Edit button when creating new
         self.btn_save.setVisible(True)
         self.btn_cancel.setVisible(True)
-        self.btn_edit.setVisible(False)
+        self.btn_edit.setEnabled(False)
 
         self.tabbed_pane.setSelectedIndex(0)  # Switch to Sample Details tab
         self.update_status("Creating new sample (draft)")
@@ -1698,7 +1715,7 @@ if curdata:
             # Show Save/Cancel buttons, hide Edit button when duplicating
             self.btn_save.setVisible(True)
             self.btn_cancel.setVisible(True)
-            self.btn_edit.setVisible(False)
+            self.btn_edit.setEnabled(False)
 
             self.tabbed_pane.setSelectedIndex(0)  # Switch to Sample Details tab
             self.update_status("Duplicating sample (draft)")
@@ -2160,7 +2177,7 @@ if curdata:
             # Show Save/Cancel buttons, hide Edit button when duplicating from catalogue
             self.btn_save.setVisible(True)
             self.btn_cancel.setVisible(True)
-            self.btn_edit.setVisible(False)
+            self.btn_edit.setEnabled(False)
 
             # Switch to Sample Details tab
             self.tabbed_pane.setSelectedIndex(0)
@@ -2196,6 +2213,8 @@ if curdata:
             current_holder = None
             current_sample_color_index = 0  # Track color index for alternating
             sample_was_ejected = False
+            current_sample_created_time = None
+            current_sample_ejected_time = None
 
             for entry in entries:
                 toggle = False
@@ -2237,9 +2256,10 @@ if curdata:
 
                 timestamp_str = "%s %d %s %d, %d.%02d %s" % (day_name, day, month, year, hour_12, minute, am_pm)
 
-                                # Determine display name and sample filepath for this row
+                # Determine display name and sample filepath for this row
                 row_sample_filepath = current_sample_filepath
-                
+                is_orphan = False
+
                 if entry.entry_type == 'sample_created':
                     display_name = entry.name
                     # Toggle if different sample
@@ -2247,15 +2267,38 @@ if curdata:
                         toggle = True
                     row_sample_filepath = entry.filepath
                     current_sample_filepath = entry.filepath
+                    current_sample_created_time = entry.timestamp
+                    current_sample_ejected_time = None
                 elif entry.entry_type == 'sample_ejected':
                     display_name = "sample ejected"
                     # Ejection event uses current sample colour for this row
                     row_sample_filepath = current_sample_filepath
+                    current_sample_ejected_time = entry.timestamp
                     # Set flag so next row gets new colour
                     sample_was_ejected = True
                     current_sample_filepath = None
                 elif entry.entry_type == 'experiment':
-                    display_name = "Exp %s" % entry.name
+                    # Detect orphaned experiments (only if we have samples defined)
+                    if has_samples:
+                        # Experiment is orphaned if:
+                        # 1. No current sample is active (between samples or before first sample)
+                        if current_sample_filepath is None:
+                            is_orphan = True
+                        # 2. Current sample exists but experiment is before its creation time
+                        elif current_sample_created_time and entry.timestamp < current_sample_created_time:
+                            is_orphan = True
+                        # 3. Current sample has been ejected and experiment is after ejection
+                        # (This shouldn't happen because we set current_sample_filepath = None on ejection,
+                        # but check anyway for safety)
+                        elif current_sample_ejected_time and entry.timestamp > current_sample_ejected_time:
+                            is_orphan = True
+
+                    # Add warning text for orphaned experiments
+                    if is_orphan:
+                        display_name = "Exp %s (no associated sample)" % entry.name
+                    else:
+                        display_name = "Exp %s" % entry.name
+
                     # If no samples defined, use holder for color alternation
                     if not has_samples and show_holder and entry.holder is not None:
                         if current_holder != entry.holder:
@@ -2287,7 +2330,8 @@ if curdata:
                     'entry': entry,
                     'sample_filepath': row_sample_filepath,  # For highlighting
                     'color_index': current_sample_color_index,  # For consistent coloring
-                    'parmod': entry.parmod if entry.entry_type == 'experiment' else None  # For dimensionality coloring
+                    'parmod': entry.parmod if entry.entry_type == 'experiment' else None,  # For dimensionality coloring
+                    'is_orphan': is_orphan  # Flag orphaned experiments
                 })
 
             self.timeline_table_model.set_rows(rows, show_holder)
@@ -2369,6 +2413,13 @@ if curdata:
         if self.create_from_selection_btn:
             can_create = self._validate_timeline_selection_for_sample()
             self.create_from_selection_btn.setEnabled(can_create)
+
+        # Update reassignment buttons
+        can_reassign_prev, can_reassign_next = self._can_reassign_experiments()
+        if self.reassign_prev_btn:
+            self.reassign_prev_btn.setEnabled(can_reassign_prev)
+        if self.reassign_next_btn:
+            self.reassign_next_btn.setEnabled(can_reassign_next)
 
         if self.view_sample_btn:
             can_view = self._can_view_sample_from_timeline()
@@ -2539,6 +2590,434 @@ if curdata:
         except Exception as e:
             MSG("Error creating sample: %s" % str(e))
             self.update_status("Error creating sample")
+
+    def _can_reassign_experiments(self):
+        """
+        Check if reassignment actions are available for selected experiments.
+        Returns (can_reassign_prev, can_reassign_next) tuple of booleans.
+        """
+        selected_rows = self.timeline_table.getSelectedRows()
+        if len(selected_rows) == 0:
+            return (False, False)
+
+        model = self.timeline_table.getModel()
+
+        # Check if ALL selected rows are orphaned experiments
+        all_orphans = True
+        for row in selected_rows:
+            row_data = model.get_row(row)
+            if not row_data or 'entry' not in row_data:
+                return (False, False)
+            entry = row_data['entry']
+            if entry.entry_type != 'experiment':
+                return (False, False)
+            if not row_data.get('is_orphan', False):
+                all_orphans = False
+                break
+
+        if not all_orphans:
+            return (False, False)
+
+        # Get all timeline rows to find adjacent samples
+        all_rows = []
+        for i in range(model.getRowCount()):
+            all_rows.append(model.get_row(i))
+
+        # Find the first and last selected row indices in full timeline
+        first_selected = min(selected_rows)
+        last_selected = max(selected_rows)
+
+        # Check for previous sample (before first selected)
+        # We want to find a sample that was ejected before these orphaned experiments
+        can_reassign_prev = False
+        for i in range(first_selected - 1, -1, -1):
+            row_data = all_rows[i]
+            if row_data and 'entry' in row_data:
+                entry = row_data['entry']
+                if entry.entry_type == 'sample_ejected':
+                    # Found an ejected sample - we can extend its ejection time
+                    can_reassign_prev = True
+                    break
+                elif entry.entry_type == 'sample_created':
+                    # Found a sample creation with no ejection - still active, not a previous sample
+                    break
+
+        # Check for next sample (after last selected)
+        can_reassign_next = False
+        for i in range(last_selected + 1, len(all_rows)):
+            row_data = all_rows[i]
+            if row_data and 'entry' in row_data:
+                entry = row_data['entry']
+                if entry.entry_type == 'sample_created':
+                    can_reassign_next = True
+                    break
+
+        return (can_reassign_prev, can_reassign_next)
+
+    def _reassign_to_previous_sample(self):
+        """Reassign selected orphaned experiments to the previous sample"""
+        selected_rows = self.timeline_table.getSelectedRows()
+        if len(selected_rows) == 0:
+            return
+
+        model = self.timeline_table.getModel()
+
+        # Get the experiments being reassigned
+        experiments = []
+        for row in sorted(selected_rows):
+            row_data = model.get_row(row)
+            if row_data and 'entry' in row_data:
+                experiments.append(row_data['entry'])
+
+        if len(experiments) == 0:
+            return
+
+        # Find the previous sample (most recent ejection before selected experiments)
+        first_selected = min(selected_rows)
+        last_selected = max(selected_rows)
+        previous_sample_entry = None
+        previous_sample_filepath = None
+
+        all_rows = []
+        for i in range(model.getRowCount()):
+            all_rows.append(model.get_row(i))
+
+        for i in range(first_selected - 1, -1, -1):
+            row_data = all_rows[i]
+            if row_data and 'entry' in row_data:
+                entry = row_data['entry']
+                if entry.entry_type == 'sample_ejected':
+                    previous_sample_entry = entry
+                    previous_sample_filepath = entry.filepath
+                    break
+                elif entry.entry_type == 'sample_created':
+                    break
+
+        if not previous_sample_filepath:
+            JOptionPane.showMessageDialog(
+                self.frame,
+                "Could not find previous sample",
+                "Reassignment Error",
+                JOptionPane.ERROR_MESSAGE
+            )
+            return
+
+        # Get sample label for confirmation
+        try:
+            sample_data = self.sample_io.read_sample(previous_sample_filepath)
+            sample_label = sample_data.get('sample', {}).get('label', 'Unknown')
+        except:
+            sample_label = 'Unknown'
+
+        # Get timestamp based on the LAST SELECTED experiment
+        last_exp_time = experiments[-1].timestamp + timedelta(seconds=5)
+
+        # Find orphaned experiments that will be affected by this timestamp change
+        # Only experiments UP TO AND INCLUDING the selection will be affected
+        affected_experiments = []
+        for i in range(first_selected, last_selected + 1):
+            row_data = all_rows[i]
+            if row_data and 'entry' in row_data:
+                entry = row_data['entry']
+                if entry.entry_type == 'experiment' and row_data.get('is_orphan', False):
+                    affected_experiments.append(entry.name)
+
+        # Show confirmation dialog
+        if len(affected_experiments) > len(experiments):
+            exp_list = ", ".join(affected_experiments)
+            message = ("Reassign experiments %s to sample '%s'?\n\n" +
+                       "Selected: %s\n" +
+                       "Additional experiments that will be included: %s\n\n" +
+                       "The sample's ejection timestamp will be updated to %s") % (
+                exp_list, sample_label,
+                ", ".join([e.name for e in experiments]),
+                ", ".join([e for e in affected_experiments if e not in [exp.name for exp in experiments]]),
+                last_exp_time.strftime("%Y-%m-%d %H:%M:%S")
+            )
+        else:
+            exp_list = ", ".join([e.name for e in experiments])
+            message = ("Reassign experiments %s to sample '%s'?\n\n" +
+                       "The sample's ejection timestamp will be updated to %s") % (
+                exp_list, sample_label, last_exp_time.strftime("%Y-%m-%d %H:%M:%S")
+            )
+
+        result = JOptionPane.showConfirmDialog(
+            self.frame,
+            message,
+            "Confirm Reassignment",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        )
+
+        if result != JOptionPane.OK_OPTION:
+            return
+
+        # Update the sample's ejected timestamp
+        try:
+            sample_data = self.sample_io.read_sample(previous_sample_filepath)
+            ejected_timestamp = last_exp_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            sample_data['metadata']['ejected_timestamp'] = ejected_timestamp
+            sample_data['metadata']['modified_timestamp'] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+            self.sample_io.write_sample(previous_sample_filepath, sample_data)
+
+            # Refresh views
+            self._refresh_sample_list()
+            self._refresh_timeline()
+            self._refresh_catalogue()
+
+            self.update_status("Reassigned %d experiments to previous sample" % len(experiments))
+
+        except Exception as e:
+            JOptionPane.showMessageDialog(
+                self.frame,
+                "Error updating sample: %s" % str(e),
+                "Reassignment Error",
+                JOptionPane.ERROR_MESSAGE
+            )
+
+    def _reassign_to_next_sample(self):
+        """Reassign selected orphaned experiments to the next sample"""
+        selected_rows = self.timeline_table.getSelectedRows()
+        if len(selected_rows) == 0:
+            return
+
+        model = self.timeline_table.getModel()
+
+        # Get the experiments being reassigned
+        experiments = []
+        for row in sorted(selected_rows):
+            row_data = model.get_row(row)
+            if row_data and 'entry' in row_data:
+                experiments.append(row_data['entry'])
+
+        if len(experiments) == 0:
+            return
+
+        # Find the next sample
+        first_selected = min(selected_rows)
+        last_selected = max(selected_rows)
+        next_sample_entry = None
+        next_sample_filepath = None
+
+        all_rows = []
+        for i in range(model.getRowCount()):
+            all_rows.append(model.get_row(i))
+
+        for i in range(last_selected + 1, len(all_rows)):
+            row_data = all_rows[i]
+            if row_data and 'entry' in row_data:
+                entry = row_data['entry']
+                if entry.entry_type == 'sample_created':
+                    next_sample_entry = entry
+                    next_sample_filepath = entry.filepath
+                    break
+
+        if not next_sample_filepath:
+            JOptionPane.showMessageDialog(
+                self.frame,
+                "Could not find next sample",
+                "Reassignment Error",
+                JOptionPane.ERROR_MESSAGE
+            )
+            return
+
+        # Get sample label for confirmation
+        try:
+            sample_data = self.sample_io.read_sample(next_sample_filepath)
+            sample_label = sample_data.get('sample', {}).get('label', 'Unknown')
+        except:
+            sample_label = 'Unknown'
+
+        # Get timestamp of first experiment
+        first_exp_time = experiments[0].timestamp - timedelta(seconds=5)
+
+        # Find ALL orphaned experiments before the next sample that will be affected
+        affected_experiments = []
+        for i in range(first_selected, last_selected + 1):
+            row_data = all_rows[i]
+            if row_data and 'entry' in row_data:
+                entry = row_data['entry']
+                if entry.entry_type == 'experiment' and row_data.get('is_orphan', False):
+                    affected_experiments.append(entry.name)
+
+        # Also check for experiments between last selected and the next sample
+        for i in range(last_selected + 1, len(all_rows)):
+            row_data = all_rows[i]
+            if row_data and 'entry' in row_data:
+                entry = row_data['entry']
+                if entry.entry_type == 'sample_created':
+                    break
+                elif entry.entry_type == 'experiment' and row_data.get('is_orphan', False):
+                    affected_experiments.append(entry.name)
+
+        # Show confirmation dialog
+        if len(affected_experiments) > len(experiments):
+            exp_list = ", ".join(affected_experiments)
+            message = ("Reassign experiments %s to sample '%s'?\n\n" +
+                       "Selected: %s\n" +
+                       "Additional experiments that will be included: %s\n\n" +
+                       "The sample's creation timestamp will be updated to %s") % (
+                exp_list, sample_label,
+                ", ".join([e.name for e in experiments]),
+                ", ".join([e for e in affected_experiments if e not in [exp.name for exp in experiments]]),
+                first_exp_time.strftime("%Y-%m-%d %H:%M:%S")
+            )
+        else:
+            exp_list = ", ".join([e.name for e in experiments])
+            message = ("Reassign experiments %s to sample '%s'?\n\n" +
+                       "The sample's creation timestamp will be updated to %s") % (
+                exp_list, sample_label, first_exp_time.strftime("%Y-%m-%d %H:%M:%S")
+            )
+
+        result = JOptionPane.showConfirmDialog(
+            self.frame,
+            message,
+            "Confirm Reassignment",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        )
+
+        if result != JOptionPane.OK_OPTION:
+            return
+
+        # Update the sample's created timestamp
+        try:
+            sample_data = self.sample_io.read_sample(next_sample_filepath)
+            created_timestamp = first_exp_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            sample_data['metadata']['created_timestamp'] = created_timestamp
+            sample_data['metadata']['modified_timestamp'] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+            self.sample_io.write_sample(next_sample_filepath, sample_data)
+
+            # Refresh views
+            self._refresh_sample_list()
+            self._refresh_timeline()
+            self._refresh_catalogue()
+
+            self.update_status("Reassigned %d experiments to next sample" % len(experiments))
+
+        except Exception as e:
+            JOptionPane.showMessageDialog(
+                self.frame,
+                "Error updating sample: %s" % str(e),
+                "Reassignment Error",
+                JOptionPane.ERROR_MESSAGE
+            )
+
+    def _reassign_to_new_sample(self):
+        """Create a new sample for the selected orphaned experiments"""
+        selected_rows = self.timeline_table.getSelectedRows()
+        if len(selected_rows) == 0:
+            return
+
+        model = self.timeline_table.getModel()
+
+        # Get the experiments being reassigned
+        experiments = []
+        for row in sorted(selected_rows):
+            row_data = model.get_row(row)
+            if row_data and 'entry' in row_data:
+                experiments.append(row_data['entry'])
+
+        if len(experiments) == 0:
+            return
+
+        # Get timestamps of first and last experiments
+        first_exp = experiments[0]
+        last_exp = experiments[-1]
+
+        # Add a few seconds before/after for safety
+        created_time = first_exp.timestamp - timedelta(seconds=5)
+        ejected_time = last_exp.timestamp + timedelta(seconds=5)
+
+        # Show confirmation dialog
+        exp_list = ", ".join([e.name for e in experiments])
+        message = ("Create a new sample for experiments %s?\n\n" +
+                   "Sample creation time: %s\n" +
+                   "Sample ejection time: %s\n\n" +
+                   "You will be able to edit the sample details after creation.") % (
+            exp_list,
+            created_time.strftime("%Y-%m-%d %H:%M:%S"),
+            ejected_time.strftime("%Y-%m-%d %H:%M:%S")
+        )
+
+        result = JOptionPane.showConfirmDialog(
+            self.frame,
+            message,
+            "Confirm New Sample",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        )
+
+        if result != JOptionPane.OK_OPTION:
+            return
+
+        # Create the sample (same logic as _create_sample_from_experiments)
+        try:
+            # Format timestamps as ISO 8601 in UTC
+            created_timestamp = created_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            ejected_timestamp = ejected_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+            # Load schema to get version
+            schema_version = '0.0.3'  # Default version
+            try:
+                with open(self.current_schema_path, 'r') as f:
+                    schema = json.load(f)
+                    schema_version = schema.get('version', '0.0.3')
+            except:
+                pass  # Use default if can't read schema
+
+            # Create default sample data
+            sample_data = {
+                'sample': {'label': ''},
+                'buffer': {},
+                'nmr_tube': {},
+                'laboratory_reference': {},
+                'metadata': {
+                    'schema_version': schema_version,
+                    'created_timestamp': created_timestamp,
+                    'modified_timestamp': created_timestamp,
+                    'ejected_timestamp': ejected_timestamp
+                },
+                'users': [],
+                'notes': ''
+            }
+
+            # Create a descriptive filename based on first experiment timestamp
+            filename = self.sample_io.generate_filename('reassigned', timestamp=created_time)
+            filepath = os.path.join(self.current_directory, filename)
+
+            # Save the sample
+            self.sample_io.write_sample(filepath, sample_data)
+
+            # Refresh views
+            self._refresh_sample_list()
+            self._refresh_timeline()
+            self._refresh_catalogue()
+
+            # Select the new sample in the list and open for editing
+            sample_files = self.sample_io.list_sample_files(self.current_directory)
+            for idx, fname in enumerate(sample_files):
+                if fname == filename:
+                    self.sample_table.setRowSelectionInterval(idx, idx)
+                    self.sample_table.scrollRectToVisible(
+                        self.sample_table.getCellRect(idx, 0, True)
+                    )
+                    # Switch to Sample Details tab and edit
+                    self.tabbed_pane.setSelectedIndex(0)
+                    self._edit_sample()
+                    break
+
+            self.update_status("Created new sample for %d experiments" % len(experiments))
+
+        except Exception as e:
+            JOptionPane.showMessageDialog(
+                self.frame,
+                "Error creating sample: %s" % str(e),
+                "Reassignment Error",
+                JOptionPane.ERROR_MESSAGE
+            )
 
     def update_status(self, text):
         """Update status label"""
@@ -2746,9 +3225,13 @@ class TimelineTableCellRenderer(DefaultTableCellRenderer):
         if row_data and not isSelected:
             sample_filepath = row_data.get('sample_filepath')
             color_index = row_data.get('color_index', 0)
+            is_orphan = row_data.get('is_orphan', False)
 
+            # Highlight orphaned experiments with warning color (highest priority)
+            if is_orphan:
+                component.setBackground(Color(255, 235, 205))  # Peach/light orange warning
             # Highlight rows matching selected sample (softer yellow)
-            if self.app.selected_sample_filepath and sample_filepath == self.app.selected_sample_filepath:
+            elif self.app.selected_sample_filepath and sample_filepath == self.app.selected_sample_filepath:
                 component.setBackground(Color(255, 252, 230))  # Soft pale yellow
             else:
                 # Alternate colors by sample using color_index
@@ -2930,11 +3413,35 @@ class TimelineMouseListener(MouseAdapter):
             can_view_sample = self.app._can_view_sample_from_timeline()
             can_open_experiment = self.app._can_open_experiment_from_timeline()
 
-            # Create retrospective sample - enabled when valid selection
-            item_create = JMenuItem("Create retrospective sample from selection")
+            # Check if reassignment actions are available
+            can_reassign_prev, can_reassign_next = self.app._can_reassign_experiments()
+
+            # Create sample from selection - enabled when valid selection
+            item_create = JMenuItem("Create sample from selection")
             item_create.setEnabled(can_create_retrospective)
             item_create.addActionListener(lambda e: self.app._create_sample_from_experiments())
             popup.add(item_create)
+
+            popup.addSeparator()
+
+            # Reassignment options - always visible for discoverability, conditionally enabled
+            # Reassign to previous sample
+            item_reassign_prev = JMenuItem("Reassign experiments to previous sample")
+            item_reassign_prev.setEnabled(can_reassign_prev)
+            item_reassign_prev.addActionListener(lambda e: self.app._reassign_to_previous_sample())
+            popup.add(item_reassign_prev)
+
+            # Reassign to next sample
+            item_reassign_next = JMenuItem("Reassign experiments to next sample")
+            item_reassign_next.setEnabled(can_reassign_next)
+            item_reassign_next.addActionListener(lambda e: self.app._reassign_to_next_sample())
+            popup.add(item_reassign_next)
+
+            # # Reassign to new sample
+            # item_reassign_new = JMenuItem("Create new sample for experiments")
+            # item_reassign_new.setEnabled(can_reassign_prev or can_reassign_next)
+            # item_reassign_new.addActionListener(lambda e: self.app._reassign_to_new_sample())
+            # popup.add(item_reassign_new)
 
             popup.addSeparator()
 
