@@ -1138,6 +1138,8 @@ if curdata:
         self.form_panel.repaint()
 
         # Set button states
+        self.btn_save.setVisible(True)
+        self.btn_cancel.setVisible(True)
         self.btn_save.setEnabled(False)
         self.btn_cancel.setEnabled(True)
 
@@ -1190,6 +1192,8 @@ if curdata:
             self.form_generator.load_data(data)
 
             # Set button states
+            self.btn_save.setVisible(True)
+            self.btn_cancel.setVisible(True)
             self.btn_save.setEnabled(False)
             self.btn_cancel.setEnabled(True)
 
