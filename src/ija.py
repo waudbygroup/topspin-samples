@@ -11,7 +11,7 @@ from datetime import datetime
 APP_KEY = "org.waudbylab.topspin-sample-manager"
 
 # Testing mode - set to True to simulate XCMD calls with dialogs instead of actual execution
-TESTING_MODE = True
+TESTING_MODE = False
 
 
 def main():
