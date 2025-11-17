@@ -1206,7 +1206,7 @@ if curdata:
             if self.draft_data:
                 sample_label = self.draft_data.get('sample', {}).get('label', 'New Sample')
 
-            self.badge_label.setText("DRAFT  " + sample_label)
+            self.badge_label.setText("DRAFT  " + str(sample_label))
             self.badge_label.setBackground(Color(218, 165, 32))  # Amber/gold
             self.badge_label.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Color(184, 134, 11), 2, True),
@@ -1218,7 +1218,7 @@ if curdata:
             active = self._get_active_sample()
             if active:
                 # Active sample loaded
-                self.badge_label.setText("ACTIVE  " + active['label'])
+                self.badge_label.setText("ACTIVE  " + str(active['label']))
                 self.badge_label.setBackground(Color(34, 139, 34))  # Forest green
                 self.badge_label.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(Color(0, 100, 0), 2, True),
@@ -1269,7 +1269,7 @@ if curdata:
                                     last_ejected = data.get('sample', {}).get('label', filename)
 
                         if last_ejected:
-                            self.badge_detail_label.setText("Last: " + last_ejected)
+                            self.badge_detail_label.setText("Last: " + str(last_ejected))
                         else:
                             self.badge_detail_label.setText("No active sample")
                     else:
