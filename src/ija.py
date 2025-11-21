@@ -124,6 +124,18 @@ def main():
         app.show()
 
         # Create new sample or duplicate with the stored injection timestamp
+        if should_create_new or should_duplicate:
+            # Check if directory matches current dataset, offer to switch
+            if not app.check_and_switch_to_curdata():
+                # User declined to switch - abort operation
+                JOptionPane.showMessageDialog(
+                    app.frame,
+                    "Sample creation cancelled - directory not switched",
+                    "Cancelled",
+                    JOptionPane.WARNING_MESSAGE
+                )
+                return
+
         if should_create_new:
             app._new_sample_with_timestamp(injection_timestamp)
             app.update_status("Creating new sample - lift air off")

@@ -855,6 +855,160 @@ if curdata:
         except Exception as e:
             self.update_status("Could not navigate to CURDATA: %s" % str(e))
 
+    def _check_directory_matches_curdata(self, callback=None, auto_select_after_nav=True):
+        """Check if current directory matches current TopSpin dataset, offer to change if not.
+
+        Args:
+            callback: Optional function to call after navigation (if user chooses to navigate)
+            auto_select_after_nav: Whether to auto-select a sample after navigation (default True)
+
+        Returns:
+            bool: True to proceed with operation, False to cancel
+        """
+        try:
+            EXEC_PYSCRIPT('''
+import os
+curdata = CURDATA()
+if curdata:
+    name = curdata[0]
+    directory = curdata[3]
+    curdata_path = os.path.join(directory, name)
+
+    from java.lang import System
+    app = System.getProperties().get("org.waudbylab.topspin-sample-manager")
+    if app:
+        app._store_curdata_check_result(curdata_path)
+''')
+
+            # Give EXEC_PYSCRIPT time to execute
+            import time
+            time.sleep(0.2)
+
+            # Check stored result
+            if not hasattr(self, '_curdata_check_result'):
+                # Could not determine current dataset - assume OK to proceed
+                return True
+
+            curdata_path = self._curdata_check_result
+            delattr(self, '_curdata_check_result')  # Clean up
+
+            if curdata_path == self.current_directory:
+                # Directories match - all good
+                return True
+
+            # Get short directory names for display
+            current_parts = self.current_directory.split(os.sep)
+            curdata_parts = curdata_path.split(os.sep)
+            current_display = os.sep.join(current_parts[-2:]) if len(current_parts) >= 2 else self.current_directory
+            curdata_display = os.sep.join(curdata_parts[-2:]) if len(curdata_parts) >= 2 else curdata_path
+
+            # Directories don't match - offer to change
+            result = JOptionPane.showConfirmDialog(
+                self.frame,
+                "Sample manager is in:\n  %s\n\nCurrent TopSpin dataset is:\n  %s\n\nSwitch to current dataset folder?" % (
+                    current_display, curdata_display
+                ),
+                "Switch Directory?",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            )
+
+            if result == JOptionPane.YES_OPTION:
+                # User wants to change - navigate to current dataset
+                # Store flag for navigation to check
+                self._skip_auto_select = not auto_select_after_nav
+                self._navigate_to_curdata()
+                # Give navigation time to complete
+                time.sleep(0.2)
+                # Call the callback to continue the operation
+                if callback:
+                    callback()
+                return False  # Indicate we handled it via callback
+            else:
+                # User declined - proceed with current directory
+                return True
+
+        except Exception as e:
+            # On error, assume OK to proceed
+            self.update_status("Could not check current dataset: %s" % str(e))
+            return True
+
+    def _store_curdata_check_result(self, curdata_path):
+        """Store CURDATA check result (called from EXEC_PYSCRIPT)"""
+        self._curdata_check_result = curdata_path
+
+    def check_and_switch_to_curdata(self):
+        """Public method for external scripts to check and switch to CURDATA if needed.
+
+        Returns:
+            bool: True if directories match or user switched, False if user declined
+        """
+        try:
+            EXEC_PYSCRIPT('''
+import os
+curdata = CURDATA()
+if curdata:
+    name = curdata[0]
+    directory = curdata[3]
+    curdata_path = os.path.join(directory, name)
+
+    from java.lang import System
+    app = System.getProperties().get("org.waudbylab.topspin-sample-manager")
+    if app:
+        app._store_curdata_check_result(curdata_path)
+''')
+
+            # Give EXEC_PYSCRIPT time to execute
+            import time
+            time.sleep(0.2)
+
+            # Check stored result
+            if not hasattr(self, '_curdata_check_result'):
+                # Could not determine current dataset - assume OK
+                return True
+
+            curdata_path = self._curdata_check_result
+            delattr(self, '_curdata_check_result')  # Clean up
+
+            if curdata_path == self.current_directory:
+                # Directories match - all good
+                return True
+
+            # Get short directory names for display
+            current_parts = self.current_directory.split(os.sep)
+            curdata_parts = curdata_path.split(os.sep)
+            current_display = os.sep.join(current_parts[-2:]) if len(current_parts) >= 2 else self.current_directory
+            curdata_display = os.sep.join(curdata_parts[-2:]) if len(curdata_parts) >= 2 else curdata_path
+
+            # Directories don't match - offer to change
+            from javax.swing import JOptionPane
+            result = JOptionPane.showConfirmDialog(
+                self.frame,
+                "Sample manager is in:\n  %s\n\nCurrent TopSpin dataset is:\n  %s\n\nSwitch to current dataset folder?" % (
+                    current_display, curdata_display
+                ),
+                "Switch Directory?",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            )
+
+            if result == JOptionPane.YES_OPTION:
+                # User wants to change - navigate to current dataset
+                # Don't auto-select after navigation for injection commands
+                self._skip_auto_select = True
+                self._navigate_to_curdata()
+                # Give navigation time to complete
+                time.sleep(0.2)
+                return True
+            else:
+                # User declined to switch
+                return False
+
+        except Exception as e:
+            # On error, assume OK to proceed
+            self.update_status("Could not check current dataset: %s" % str(e))
+            return True
+
     def _browse_directory(self):
         """Browse for directory"""
         chooser = JFileChooser()
@@ -891,6 +1045,13 @@ if curdata:
         self._refresh_sample_list()
         self._refresh_timeline()
         self._update_badge()
+
+        # Check if we should skip auto-select (set by _check_directory_matches_curdata)
+        skip_auto_select = getattr(self, '_skip_auto_select', False)
+        if skip_auto_select:
+            # Clear the flag
+            delattr(self, '_skip_auto_select')
+            auto_select = False
 
         # Auto-select appropriate sample if requested
         if auto_select:
@@ -1591,6 +1752,17 @@ if curdata:
 
     def _new_sample(self):
         """Create new sample"""
+        # Check if current directory matches current dataset, continue automatically if switched
+        # Don't auto-select after navigation since we're creating a new sample
+        if not self._check_directory_matches_curdata(callback=self._new_sample_impl, auto_select_after_nav=False):
+            # User chose to switch directories - callback will handle the operation
+            return
+
+        # Proceed with creating sample in current directory
+        self._new_sample_impl()
+
+    def _new_sample_impl(self):
+        """Implementation of new sample creation (after directory check)"""
         # Check if active sample exists and prompt to eject
         active = self._get_active_sample()
         if active:
@@ -1651,6 +1823,37 @@ if curdata:
             self.update_status("Please select a sample to duplicate")
             return
 
+        # Read the sample data BEFORE directory check (so we have it if directory changes)
+        try:
+            filepath = os.path.join(self.current_directory, self.current_sample_file)
+            sample_data = self.sample_io.read_sample(filepath)
+        except Exception as e:
+            MSG("Error reading sample: %s" % str(e))
+            return
+
+        # Store data for callback to use
+        self._duplicate_data = sample_data
+
+        # Check if current directory matches current dataset, continue automatically if switched
+        # Don't auto-select after navigation since we're creating a duplicate (draft)
+        if not self._check_directory_matches_curdata(callback=self._duplicate_sample_impl, auto_select_after_nav=False):
+            # User chose to switch directories - callback will handle the operation
+            return
+
+        # Proceed with duplicating sample in current directory
+        self._duplicate_sample_impl()
+
+    def _duplicate_sample_impl(self):
+        """Implementation of sample duplication (after directory check)"""
+        # Retrieve the sample data (stored before directory check)
+        data = getattr(self, '_duplicate_data', None)
+        if data is None:
+            MSG("Error: sample data not available")
+            return
+
+        # Clean up stored data
+        delattr(self, '_duplicate_data')
+
         # Check if active sample exists and prompt to eject
         active = self._get_active_sample()
         if active:
@@ -1674,8 +1877,6 @@ if curdata:
                 return
 
         try:
-            filepath = os.path.join(self.current_directory, self.current_sample_file)
-            data = self.sample_io.read_sample(filepath)
 
             # Append "(copy)" to label
             if 'sample' in data and 'label' in data['sample']:
