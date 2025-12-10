@@ -41,7 +41,7 @@ To contribute code:
 
 ### Schema Changes
 
-If you need to modify the sample metadata structure, propose changes in the [nmr-sample-schema](https://github.com/waudbygroup/nmr-sample-schema) repository first. Schema changes require clear use cases, backwards compatibility plans, and updates to all tools in the ecosystem.
+If you believe there is a need to modify the sample metadata structure, propose changes in the [nmr-sample-schema](https://github.com/waudbygroup/nmr-sample-schema) repository. Schema changes require clear use cases, backwards compatibility plans, and updates to all tools in the ecosystem.
 
 ---
 

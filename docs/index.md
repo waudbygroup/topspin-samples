@@ -8,7 +8,7 @@
 
 ## The Problem
 
-NMR spectroscopy has excellent software for managing experiments, but sample tracking has always been a blind spot. When you return to old datasets months or years later, can you confidently answer what the protein concentration was, what buffer was used, or what isotopic labelling scheme was employed? Most NMR users rely on lab notebooks, inconsistent text files, or memory, which becomes a real problem when preparing data for repository submission, writing publications, or troubleshooting experiments.
+NMR spectroscopy has good software for setting up experiments, but sample tracking has always been a blind spot. When you return to old datasets months or years later, can you confidently answer what the protein concentration was, what buffer was used, or what isotopic labelling scheme was employed? Most NMR users rely on lab notebooks, inconsistent text files, or memory, which becomes a real problem when preparing data for repository submission, writing publications, or troubleshooting experiments.
 
 ## What It Does
 
@@ -22,11 +22,11 @@ Sample Manager provides:
 
 **Right now**: See what you've been running, organised by sample. Even without annotations, the timeline gives you a birds-eye view of your data.
 
-**This year**: Never again wonder what buffer you used last month. Search across all your samples to find "that 50 mM phosphate sample from August".
+**This year**: Never again wonder what buffer you used last month. Search across all your samples to find "that lysozyme sample from August".
 
-**Long term**: Complete documentation for papers, thesis chapters, and data repository submissions. Future you will thank present you.
+**Long term**: Complete documentation for papers, thesis chapters, and data repository submissions.
 
-**For the group**: Track who's running what, maintain sample history when people leave. Lab memory that doesn't walk out the door.
+**For the group**: Track who's running what and maintain sample history when people leave.
 
 ## Get Started
 
