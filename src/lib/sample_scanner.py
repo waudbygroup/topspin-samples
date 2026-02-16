@@ -173,7 +173,8 @@ class SampleScanner:
                         component_strs.append(name)
 
                     # Build tooltip detail string
-                    conc = comp.get('concentration', '')
+                    # Use new field name 'concentration_or_amount' (v0.1.0+)
+                    conc = comp.get('concentration_or_amount', comp.get('concentration', ''))
                     unit = comp.get('unit', '')
                     if conc and unit:
                         detail = "%s: %s %s" % (name, conc, unit)
@@ -241,7 +242,11 @@ class SampleScanner:
             tube_type = tube_data.get('type', '')
             tube_parts = []
             if diameter:
-                tube_parts.append(diameter)
+                # Format diameter value (now numeric in v0.1.0)
+                if isinstance(diameter, (int, float)):
+                    tube_parts.append("%.1f mm" % diameter)
+                else:
+                    tube_parts.append(str(diameter))
             if tube_type:
                 tube_parts.append(tube_type)
             tube_str = ' '.join(tube_parts) if tube_parts else ''
@@ -249,18 +254,25 @@ class SampleScanner:
             # Build tube tooltip with SampleJet info
             tube_details = []
             if diameter:
-                tube_details.append("Diameter: %s" % diameter)
+                if isinstance(diameter, (int, float)):
+                    tube_details.append("Diameter: %.1f mm" % diameter)
+                else:
+                    tube_details.append("Diameter: %s" % diameter)
             if tube_type:
                 tube_details.append("Type: %s" % tube_type)
             volume = tube_data.get('sample_volume_uL', '')
             if volume:
                 tube_details.append("Volume: %s uL" % volume)
-            sj_pos = tube_data.get('samplejet_rack_position', '')
-            if sj_pos:
-                tube_details.append("SampleJet Position: %s" % sj_pos)
-            sj_rack = tube_data.get('samplejet_rack_id', '')
+            mass = tube_data.get('sample_mass_mg', '')
+            if mass:
+                tube_details.append("Mass: %s mg" % mass)
+            # Use new field name 'rack_id' (v0.1.0+), fall back to old name
+            sj_rack = tube_data.get('rack_id', tube_data.get('samplejet_rack_id', ''))
             if sj_rack:
-                tube_details.append("SampleJet Rack: %s" % sj_rack)
+                tube_details.append("Rack ID: %s" % sj_rack)
+            rotor_serial = tube_data.get('rotor_serial', '')
+            if rotor_serial:
+                tube_details.append("Rotor Serial: %s" % rotor_serial)
             tube_tooltip = '\n'.join(tube_details) if tube_details else ''
 
             # Extract notes (first line for display)

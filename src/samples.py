@@ -2741,11 +2741,11 @@ if curdata:
         # Use the schema default structure
         try:
             # Load schema to get version
-            schema_version = '0.0.3'  # Default version
+            schema_version = '0.1.0'  # Default version
             try:
                 with open(self.current_schema_path, 'r') as f:
                     schema = json.load(f)
-                    schema_version = schema.get('version', '0.0.3')
+                    schema_version = schema.get('version', '0.1.0')
             except:
                 pass  # Use default if can't read schema
 
@@ -3165,11 +3165,11 @@ if curdata:
             ejected_timestamp = ejected_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
             # Load schema to get version
-            schema_version = '0.0.3'  # Default version
+            schema_version = '0.1.0'  # Default version
             try:
                 with open(self.current_schema_path, 'r') as f:
                     schema = json.load(f)
-                    schema_version = schema.get('version', '0.0.3')
+                    schema_version = schema.get('version', '0.1.0')
             except:
                 pass  # Use default if can't read schema
 

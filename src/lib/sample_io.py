@@ -8,11 +8,18 @@ import json
 import os
 from datetime import datetime
 
+# Import migration functionality
+try:
+    from migrate import update_to_latest_schema
+    MIGRATION_AVAILABLE = True
+except ImportError:
+    MIGRATION_AVAILABLE = False
+
 
 class SampleIO:
     """Handle reading/writing sample JSON files with proper timestamping"""
 
-    def __init__(self, schema_version="0.0.3"):
+    def __init__(self, schema_version="0.1.0"):
         self.schema_version = schema_version
 
     @staticmethod
@@ -71,11 +78,27 @@ class SampleIO:
         except ValueError:
             return None, None
 
-    def read_sample(self, filepath):
-        """Read sample JSON file"""
+    def read_sample(self, filepath, migrate=True):
+        """
+        Read sample JSON file and optionally migrate to latest schema
+
+        Args:
+            filepath: Path to JSON file
+            migrate: If True, automatically migrate to latest schema version
+        """
         try:
             with open(filepath, 'r') as f:
                 data = json.load(f)
+
+            # Apply migration if available and requested
+            if migrate and MIGRATION_AVAILABLE:
+                try:
+                    data = update_to_latest_schema(data)
+                except Exception as e:
+                    # Log migration error but still return data
+                    # Don't fail the read operation
+                    pass
+
             return data
         except (IOError, ValueError) as e:
             raise Exception("Failed to read sample file %s: %s" % (filepath, str(e)))
