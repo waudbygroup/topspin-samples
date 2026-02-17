@@ -746,6 +746,14 @@ class SchemaFormGenerator:
 
         return data
 
+    def _get_text_without_hint(self, component):
+        """Get text from a component, returning empty string if showing hint"""
+        # Look up TextPrompt by component reference
+        for prompt in self.text_prompts.values():
+            if prompt.component is component:
+                return prompt.getText().strip()
+        return component.getText().strip()
+
     def _get_array_data(self, array_component):
         """Extract data from array field"""
         items_list = array_component.get('items', [])
@@ -757,7 +765,7 @@ class SchemaFormGenerator:
         for item in items_list:
             if isinstance(item, JTextField):
                 # Simple string item
-                text = item.getText().strip()
+                text = self._get_text_without_hint(item)
                 if text:
                     result.append(text)
             elif isinstance(item, dict):
@@ -765,7 +773,7 @@ class SchemaFormGenerator:
                 item_data = {}
                 for key, comp in item.items():
                     if isinstance(comp, JTextField):
-                        text = comp.getText().strip()
+                        text = self._get_text_without_hint(comp)
                         if text:
                             try:
                                 item_data[key] = float(text) if '.' in text else int(text)

@@ -189,43 +189,21 @@ class TimelineBuilder:
     @staticmethod
     def _get_experiment_timestamp(acqus_path):
         """
-        Extract experiment timestamp from acqus file and convert to UTC
+        Extract experiment timestamp from acqus file.
 
-        Looks for a line like:
-        $$ 2023-10-11 11:04:48.196 +0100  waudbyc@cl-nmr-spec701
-        or
-        $$ 2021-03-25 22:03:53.590 -0400  nmr@850cbec
+        Reads ##$DATE= Unix timestamp (e.g. ##$DATE= 1483480402).
+        Falls back to file mtime if not found.
 
-        Returns datetime object in UTC or None if not found
+        Returns datetime object (UTC) or None if not found
         """
-        import re
-
         try:
             with open(acqus_path, 'r') as f:
                 for line in f:
-                    # Look for timestamp pattern with timezone: $$ YYYY-MM-DD HH:MM:SS.mmm +/-HHMM
-                    match = re.search(r'\$\$\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})(?:\.\d+)?\s+([-+]\d{4})', line)
-                    if match:
-                        timestamp_str = match.group(1)
-                        tz_offset_str = match.group(2)
+                    if line.startswith('##$DATE='):
+                        value = line.split('=')[1].strip()
+                        unix_ts = int(value)
+                        return datetime.utcfromtimestamp(unix_ts)
 
-                        # Parse: 2023-10-11 11:04:48
-                        dt_local = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
-
-                        # Parse timezone offset: +0100 or -0400
-                        tz_sign = 1 if tz_offset_str[0] == '+' else -1
-                        tz_hours = int(tz_offset_str[1:3])
-                        tz_minutes = int(tz_offset_str[3:5])
-                        tz_offset_seconds = tz_sign * (tz_hours * 3600 + tz_minutes * 60)
-
-                        # Convert to UTC by subtracting the timezone offset
-                        # (if local time is +0100, UTC is 1 hour earlier)
-                        from datetime import timedelta
-                        dt_utc = dt_local - timedelta(seconds=tz_offset_seconds)
-
-                        return dt_utc
-
-            # Timestamp not found in file
             return None
 
         except Exception:
