@@ -9,9 +9,18 @@ from javax.swing.event import DocumentListener
 from java.awt import *
 import json
 from collections import OrderedDict
+import os
+import sys
 
 # Import Box for vertical spacing
 from javax.swing import Box
+
+# Add parent directory to path for imports
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+if _current_dir not in sys.path:
+    sys.path.insert(0, _current_dir)
+
+from text_prompt import TextPrompt
 
 
 class SchemaFormGenerator:
@@ -21,6 +30,7 @@ class SchemaFormGenerator:
         """Load schema from file"""
         self.schema = self._load_schema(schema_path)
         self.components = {}  # Map field paths to components
+        self.text_prompts = {}  # Map field paths to TextPrompt instances
         self.data = {}  # Current form data
         self.app = None  # Reference to app for modification tracking
 
@@ -37,6 +47,7 @@ class SchemaFormGenerator:
         """Create main form panel with all fields"""
         # Clear components dictionary for fresh form
         self.components = {}
+        self.text_prompts = {}
         self.app = app  # Store app reference for modification tracking
 
         panel = JPanel()
@@ -107,6 +118,8 @@ class SchemaFormGenerator:
             label_text = prop_schema.get('title', prop_name)
             jlabel = JLabel("%s:" % label_text)
             jlabel.setFont(jlabel.getFont().deriveFont(11.0))
+            jlabel.setPreferredSize(Dimension(150, 20))  # Fixed width for alignment
+            jlabel.setMinimumSize(Dimension(150, 20))
             description = prop_schema.get('description', '')
             if description:
                 jlabel.setToolTipText(description)
@@ -207,6 +220,8 @@ class SchemaFormGenerator:
         label_text = field_schema.get('title', label)
         jlabel = JLabel("%s:" % label_text)
         jlabel.setFont(jlabel.getFont().deriveFont(11.0))
+        jlabel.setPreferredSize(Dimension(150, 20))  # Fixed width for alignment
+        jlabel.setMinimumSize(Dimension(150, 20))
         if description:
             jlabel.setToolTipText(description)
 
@@ -236,23 +251,25 @@ class SchemaFormGenerator:
                 # Complex array (objects) - use add/remove buttons
                 component = self._create_array_field(field_path, field_schema)
         elif field_type == 'number' or field_type == ['number', 'null']:
-            # Number input with tooltip
+            # Number input with hint text
             component = JTextField()
             component.setPreferredSize(Dimension(150, 24))
             component.setMinimumSize(Dimension(80, 24))
             component.getDocument().addDocumentListener(FormModificationListener(self))
             if description:
-                component.setToolTipText(description)
+                # Set hint text using a custom TextPrompt class
+                self.text_prompts[field_path] = TextPrompt(description, component)
         elif field_type == 'string' or field_type == ['string']:
             # Text input
-            if label == 'Notes':
-                # Multi-line for Notes
-                text_area = JTextArea(4, 30)
+            if label.lower() == 'notes':
+                # Multi-line for Notes (2-3 lines)
+                text_area = JTextArea(3, 30)
                 text_area.setLineWrap(True)
                 text_area.setWrapStyleWord(True)
                 text_area.getDocument().addDocumentListener(FormModificationListener(self))
                 if description:
-                    text_area.setToolTipText(description)
+                    # Set hint text using a custom TextPrompt class
+                    self.text_prompts[field_path] = TextPrompt(description, text_area)
                 component = JScrollPane(text_area)
                 self.components[field_path] = text_area  # Store text area, not scroll pane
             else:
@@ -261,7 +278,8 @@ class SchemaFormGenerator:
                 component.setMinimumSize(Dimension(100, 24))
                 component.getDocument().addDocumentListener(FormModificationListener(self))
                 if description:
-                    component.setToolTipText(description)
+                    # Set hint text using a custom TextPrompt class
+                    self.text_prompts[field_path] = TextPrompt(description, component)
         elif field_type == 'object':
             # Nested object - create sub-panel
             component = self._create_nested_object_field(field_path, field_schema)
@@ -316,7 +334,8 @@ class SchemaFormGenerator:
         text_field.setMinimumSize(Dimension(200, 24))
         text_field.getDocument().addDocumentListener(FormModificationListener(self))
         if description:
-            text_field.setToolTipText(description)
+            # Set hint text using TextPrompt
+            self.text_prompts[field_path] = TextPrompt(description, text_field)
 
         gbc.gridx = 0
         gbc.gridy = 1
@@ -433,13 +452,24 @@ class SchemaFormGenerator:
             enum_values = prop_schema.get('enum')
             description = prop_schema.get('description', '')
 
-            field_panel = JPanel(FlowLayout(FlowLayout.LEFT))
+            field_panel = JPanel(GridBagLayout())
+            gbc = GridBagConstraints()
+            gbc.insets = Insets(3, 5, 3, 5)
+            gbc.anchor = GridBagConstraints.WEST
+
             # Use title from schema if available, otherwise use prop_name
             label_text = prop_schema.get('title', prop_name)
             label = JLabel("%s:" % label_text)
+            label.setPreferredSize(Dimension(120, 20))  # Fixed width for alignment
+            label.setMinimumSize(Dimension(120, 20))
             if description:
                 label.setToolTipText(description)
-            field_panel.add(label)
+
+            gbc.gridx = 0
+            gbc.gridy = 0
+            gbc.weightx = 0.0
+            gbc.fill = GridBagConstraints.NONE
+            field_panel.add(label, gbc)
 
             if enum_values:
                 component = JComboBox(enum_values)
@@ -450,15 +480,25 @@ class SchemaFormGenerator:
                 component = JTextField(10)
                 component.getDocument().addDocumentListener(FormModificationListener(self))
                 if description:
-                    component.setToolTipText(description)
+                    # Set hint text (store with unique key for array items)
+                    prompt_key = "%s[%d].%s" % (field_path, len(items_list), prop_name)
+                    self.text_prompts[prompt_key] = TextPrompt(description, component)
             else:
                 component = JTextField(15)
                 component.getDocument().addDocumentListener(FormModificationListener(self))
                 if description:
-                    component.setToolTipText(description)
+                    # Set hint text (store with unique key for array items)
+                    prompt_key = "%s[%d].%s" % (field_path, len(items_list), prop_name)
+                    self.text_prompts[prompt_key] = TextPrompt(description, component)
 
             item_components[prop_name] = component
-            field_panel.add(component)
+
+            gbc.gridx = 1
+            gbc.gridy = 0
+            gbc.weightx = 1.0
+            gbc.fill = GridBagConstraints.HORIZONTAL
+            field_panel.add(component, gbc)
+
             item_panel.add(field_panel)
 
         # Remove button
@@ -509,9 +549,15 @@ class SchemaFormGenerator:
                         component.setText(', '.join(str(v) for v in value))
                     else:
                         component.setText(str(value))
+                    # If this field has a TextPrompt, hide it since we have data
+                    if field_path in self.text_prompts:
+                        self.text_prompts[field_path].hideHint()
             elif isinstance(component, JTextArea):
                 if value is not None:
                     component.setText(str(value))
+                    # If this field has a TextPrompt, hide it since we have data
+                    if field_path in self.text_prompts:
+                        self.text_prompts[field_path].hideHint()
             elif isinstance(component, JComboBox):
                 if value is not None:
                     component.setSelectedItem(value)
@@ -572,13 +618,24 @@ class SchemaFormGenerator:
                     enum_values = prop_schema.get('enum')
                     description = prop_schema.get('description', '')
 
-                    field_panel = JPanel(FlowLayout(FlowLayout.LEFT))
+                    field_panel = JPanel(GridBagLayout())
+                    gbc = GridBagConstraints()
+                    gbc.insets = Insets(3, 5, 3, 5)
+                    gbc.anchor = GridBagConstraints.WEST
+
                     # Use title from schema if available, otherwise use prop_name
                     label_text = prop_schema.get('title', prop_name)
                     label = JLabel("%s:" % label_text)
+                    label.setPreferredSize(Dimension(120, 20))  # Fixed width for alignment
+                    label.setMinimumSize(Dimension(120, 20))
                     if description:
                         label.setToolTipText(description)
-                    field_panel.add(label)
+
+                    gbc.gridx = 0
+                    gbc.gridy = 0
+                    gbc.weightx = 0.0
+                    gbc.fill = GridBagConstraints.NONE
+                    field_panel.add(label, gbc)
 
                     if enum_values:
                         component = JComboBox(enum_values)
@@ -591,20 +648,33 @@ class SchemaFormGenerator:
                     elif prop_type == 'number':
                         component = JTextField(10)
                         component.getDocument().addDocumentListener(FormModificationListener(self))
-                        if description:
-                            component.setToolTipText(description)
+                        # Set value first before hint text
                         if prop_name in value:
                             component.setText(str(value[prop_name]))
+                        if description:
+                            # Set hint text (store with unique key for array items)
+                            # Note: Don't use field_path here as it's not defined in this scope
+                            prompt_key = "array_item_%d_%s" % (len(items_list), prop_name)
+                            self.text_prompts[prompt_key] = TextPrompt(description, component)
                     else:
                         component = JTextField(15)
                         component.getDocument().addDocumentListener(FormModificationListener(self))
-                        if description:
-                            component.setToolTipText(description)
+                        # Set value first before hint text
                         if prop_name in value:
                             component.setText(str(value[prop_name]))
+                        if description:
+                            # Set hint text (store with unique key for array items)
+                            prompt_key = "array_item_%d_%s" % (len(items_list), prop_name)
+                            self.text_prompts[prompt_key] = TextPrompt(description, component)
 
                     item_components[prop_name] = component
-                    field_panel.add(component)
+
+                    gbc.gridx = 1
+                    gbc.gridy = 0
+                    gbc.weightx = 1.0
+                    gbc.fill = GridBagConstraints.HORIZONTAL
+                    field_panel.add(component, gbc)
+
                     item_panel.add(field_panel)
 
                 # Remove button
@@ -636,7 +706,12 @@ class SchemaFormGenerator:
                 # Array field
                 value = self._get_array_data(component)
             elif isinstance(component, JTextField):
-                text = component.getText().strip()
+                # Check if this field has a TextPrompt and get the real text
+                if field_path in self.text_prompts:
+                    text = self.text_prompts[field_path].getText().strip()
+                else:
+                    text = component.getText().strip()
+
                 if text:
                     # Check if this field is a string array in the schema
                     if self._is_string_array_field(field_path):
@@ -655,7 +730,12 @@ class SchemaFormGenerator:
                         except ValueError:
                             value = text
             elif isinstance(component, JTextArea):
-                text = component.getText().strip()
+                # Check if this field has a TextPrompt and get the real text
+                if field_path in self.text_prompts:
+                    text = self.text_prompts[field_path].getText().strip()
+                else:
+                    text = component.getText().strip()
+
                 if text:
                     value = text
             elif isinstance(component, JComboBox):
