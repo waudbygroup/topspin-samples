@@ -2737,8 +2737,44 @@ if curdata:
         created_timestamp = created_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
         ejected_timestamp = ejected_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
-        # Create empty sample with these timestamps
-        # Use the schema default structure
+        # Look for the most recent sample before the selection to offer duplication
+        previous_sample_data = None
+        previous_sample_label = None
+        first_selected_row = selected_rows[0]
+        for row in range(first_selected_row - 1, -1, -1):
+            row_data = model.get_row(row)
+            if row_data and 'entry' in row_data:
+                entry = row_data['entry']
+                if entry.entry_type in ('sample_created', 'sample_ejected'):
+                    filepath = row_data.get('sample_filepath')
+                    if filepath:
+                        try:
+                            previous_sample_data = self.sample_io.read_sample(filepath)
+                            previous_sample_label = previous_sample_data.get('sample', {}).get('label', '') or 'previous sample'
+                        except Exception:
+                            pass
+                    break
+
+        # Prompt: new sample or duplicate previous?
+        if previous_sample_data is not None:
+            options = ["New sample", "Duplicate '%s'" % previous_sample_label, "Cancel"]
+            choice = JOptionPane.showOptionDialog(
+                self.frame,
+                "Create a new blank sample, or duplicate '%s'?" % previous_sample_label,
+                "Create Sample from Experiments",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                None,
+                options,
+                options[0]
+            )
+            if choice == 2 or choice == JOptionPane.CLOSED_OPTION:
+                return
+            use_duplicate = (choice == 1)
+        else:
+            use_duplicate = False
+
+        # Build sample data
         try:
             # Load schema to get version
             schema_version = '0.1.0'  # Default version
@@ -2749,21 +2785,29 @@ if curdata:
             except:
                 pass  # Use default if can't read schema
 
-            # Create default sample data
-            sample_data = {
-                'sample': {'label': ''},
-                'buffer': {},
-                'nmr_tube': {},
-                'laboratory_reference': {},
-                'metadata': {
-                    'schema_version': schema_version,
-                    'created_timestamp': created_timestamp,
-                    'modified_timestamp': created_timestamp,
-                    'ejected_timestamp': ejected_timestamp
-                },
-                'users': [],
-                'notes': ''
-            }
+            if use_duplicate:
+                # Base on previous sample, stripping timestamps
+                sample_data = previous_sample_data
+                if 'sample' in sample_data and 'label' in sample_data['sample']:
+                    sample_data['sample']['label'] = sample_data['sample']['label'] + " (copy)"
+                sample_data.setdefault('metadata', {})
+            else:
+                # Blank sample
+                sample_data = {
+                    'sample': {'label': ''},
+                    'buffer': {},
+                    'nmr_tube': {},
+                    'laboratory_reference': {},
+                    'metadata': {},
+                    'users': [],
+                    'notes': ''
+                }
+
+            # Set metadata timestamps
+            sample_data['metadata']['schema_version'] = schema_version
+            sample_data['metadata']['created_timestamp'] = created_timestamp
+            sample_data['metadata']['modified_timestamp'] = created_timestamp
+            sample_data['metadata']['ejected_timestamp'] = ejected_timestamp
 
             # Create a descriptive filename based on first experiment timestamp
             filename = self.sample_io.generate_filename('retrospective', timestamp=created_time)
