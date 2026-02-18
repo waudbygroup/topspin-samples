@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NMR Sample Manager for Topspin</title>
+    <link rel="stylesheet" href="css/docs.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1>NMR Sample Manager for Topspin</h1>
+            <nav class="nav">
+                <a href="index.html" class="nav-link active">Home</a>
+                <a href="installation.html" class="nav-link">Installation</a>
+                <a href="app.html" class="nav-link">Topspin App</a>
+                <a href="commands.html" class="nav-link">Topspin Commands</a>
+                <a href="https://nmr-samples.github.io/" class="nav-link">Ecosystem</a>
+                <a href="https://waudbylab.org/" class="nav-link">Waudby Lab</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="content">
+        <h1>NMR Sample Manager for TopSpin</h1>
+
+        <p>Sample Manager records what's in the magnet alongside your experiment data. It
+            provides a GUI for viewing and searching sample history (launch with
+            <code>samples</code>) and drop-in replacements for TopSpin's injection and ejection
+            commands (<code>ija</code>, <code>eja</code>, <code>sxa</code>) that capture sample
+            metadata at the point of use.
+        </p>
+
+        <p>Metadata is stored as JSON files in your data directories. Even without
+            annotations, the timeline view gives you a bird's-eye view of what you've been
+            running. With annotations, you get searchable records of sample composition, buffer
+            conditions, and tube details — ready for writing up, data deposition, or handing
+            over to the next person.</p>
+
+        <video controls autoplay muted class="demo-video">
+            <source src="movies/topspin-samples.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+
+        <p>If you forget to annotate at the time, you can always create annotations
+            retrospectively by selecting experiments from the timeline.</p>
+
+        <p>Sample files use a shared
+            <a href="https://github.com/nmr-samples/schema">open JSON schema</a> and are
+            compatible with the
+            <a href="https://nmr-samples.github.io/online/">web-based Sample Manager</a>,
+            <a href="https://github.com/waudbygroup/NMRTools.jl">NMRTools.jl</a>,
+            <a href="https://github.com/nomad-nmr">NOMAD</a>, and
+            <a href="https://www.nmr-titan.com">NMR TITAN</a>.
+        </p>
+
+        <p><a href="installation.html">Installation takes about 5 minutes →</a></p>
+
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NMR Sample Manager for Topspin</title>
+    <link rel="stylesheet" href="css/docs.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1>NMR Sample Manager for Topspin</h1>
+            <nav class="nav">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="installation.html" class="nav-link">Installation</a>
+                <a href="app.html" class="nav-link active">Topspin App</a>
+                <a href="commands.html" class="nav-link">Topspin Commands</a>
+                <a href="https://nmr-samples.github.io/" class="nav-link">Ecosystem</a>
+                <a href="https://waudbylab.org/" class="nav-link">Waudby Lab</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="content">
+        <h1>The Samples App</h1>
+
+        <p>Type <code>samples</code> in TopSpin to open the GUI. The window navigates to
+            your current dataset directory and shows three views: a samples list, a timeline,
+            and a catalogue. If the window is already open, typing <code>samples</code>
+            brings it to the front.</p>
+
+        <!-- main window screenshot -->
+        <img src="images/app-screenshot.png" alt="Topspin samples app screenshot" class="screenshot">
+
+        <h2>Timeline</h2>
+
+        <p>The timeline shows all experiments in chronological order, colour-coded by
+            dimensionality (black = 1D, blue = 2D, green = 3D+). Even without sample
+            annotations, this gives you a navigable index of your data. Double-click any
+            experiment to open that dataset in TopSpin.</p>
+
+        <!-- timeline screenshot -->
+        <img src="images/timeline.png" alt="Timeline view screenshot" class="screenshot">
+
+        <p>For SampleJet users, holder positions appear automatically in the timeline
+            from experiment parameters, without any annotation required.</p>
+
+        <h3>Retrospective Annotation</h3>
+
+        <p>Right-click in the timeline and select the experiments that correspond to a
+            single sample. The system sets the created and ejected timestamps from the first
+            and last selected experiments. Fill in the form and save — the annotation appears
+            as if you'd created it at the time.</p>
+
+        <!-- retrospective annotation screenshot -->
+        <img src="images/retrospective-sample-creation.png"
+            alt="Screenshot illustrating creation of a retrospective sample annotation" class="screenshot">
+
+        <h2>Catalogue</h2>
+
+        <p>The catalogue shows all samples across your configured root directories, with
+            search and filtering. Use it to find samples by user, buffer composition, sample
+            components, or any text in the label or notes. Configure root directories via
+            Settings to enable multi-directory browsing.</p>
+
+        <!-- catalogue screenshot -->
+        <img src="images/sample-catalogue.png" alt="Catalogue view screenshot" class="screenshot">
+
+        <h2>Creating and Editing Samples</h2>
+
+        <p>Click <strong>New...</strong> to create a sample annotation. All fields are
+            optional:</p>
+
+        <ul>
+            <li><strong>People:</strong> users, research groups</li>
+            <li><strong>Sample:</strong> label, components (name, concentration, isotopic labelling)</li>
+            <li><strong>Buffer:</strong> pH, solvent, chemical shift reference, buffer components</li>
+            <li><strong>NMR Tube:</strong> diameter, type, sample volume, SampleJet position</li>
+            <li><strong>Laboratory Reference:</strong> sample ID, lab book entry</li>
+            <li><strong>Notes:</strong> free-form text</li>
+        </ul>
+
+        <!-- editing screenshot -->
+        <img src="images/editing-sample-buffer.png" alt="Sample editing form screenshot" class="screenshot">
+
+        <p>The file is saved as <code>YYYY-MM-DD_HHMMSS_[label].json</code> in the
+            experiment directory. Creating a new sample automatically ejects any previously
+            active sample — you can only have one sample in the magnet at a time.</p>
+
+        <p>Select a sample and click <strong>Edit</strong> (or double-click) to modify it.
+            Click <strong>Duplicate...</strong> to copy it as a template — useful for
+            titration series or experiments where only a few parameters change.</p>
+
+        <h2>Ejecting and Deleting</h2>
+
+        <p>Click <strong>Mark as Ejected</strong> to timestamp when a sample was removed.
+            Ejected samples can be deleted (this removes the JSON file; experiment data is
+            unaffected). Active samples must be ejected before deletion.</p>
+
+        <h2>Schema Versioning</h2>
+
+        <p>New samples use the current schema version. When opening samples created with
+            older schema versions, Sample Manager loads the correct historical schema and updates it
+            automatically. Saving an old sample upgrades it to the current version. If a
+            required schema version isn't installed, update your installation via
+            <code>git pull</code>.
+        </p>
+    </div>
+</body>
+
+</html>

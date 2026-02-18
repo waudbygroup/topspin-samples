@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NMR Sample Manager for Topspin</title>
+    <link rel="stylesheet" href="css/docs.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1>NMR Sample Manager for Topspin</h1>
+            <nav class="nav">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="installation.html" class="nav-link">Installation</a>
+                <a href="app.html" class="nav-link">Topspin App</a>
+                <a href="commands.html" class="nav-link active">Topspin Commands</a>
+                <a href="https://nmr-samples.github.io/" class="nav-link">Ecosystem</a>
+                <a href="https://waudbylab.org/" class="nav-link">Waudby Lab</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="content">
+        <h1>Commands</h1>
+
+        <p>These commands are drop-in replacements for TopSpin's <code>ij</code>,
+            <code>ej</code>, and <code>sx</code> that add metadata capture. One sample
+            annotation spans multiple experiments: you create it when loading the sample and
+            close it when removing it.
+        </p>
+
+        <!-- block diagram -->
+        <img src="images/block-diagram.png" class="screenshot"
+            alt="Block diagram showing the relationship between TopSpin commands and metadata capture">
+
+        <h2><code>ija</code> — inject and annotate</h2>
+
+        <p>Replaces <code>ij</code>. Turns off lift air to lower the sample, then opens
+            the annotation form. Fill in sample details (all fields optional) and save to
+            create a JSON file with the current timestamp.</p>
+
+        <p>If a sample is already active in the current directory, you'll be prompted to
+            either keep it (if you're continuing with the same sample) or eject it first.</p>
+
+        <h2><code>eja</code> — eject and annotate</h2>
+
+        <p>Replaces <code>ej</code>. Turns on lift air to raise the sample and closes the
+            active annotation with an ejection timestamp. You can optionally add notes before
+            closing. If no sample is active, the command just performs the physical
+            ejection.</p>
+
+        <h2><code>sxa</code> — SampleJet exchange and annotate</h2>
+
+        <p>Replaces <code>sx</code> for automated sample changers.</p>
+
+        <ul>
+            <li><code>sxa 15</code> — loads position 15 and opens the annotation form</li>
+            <li><code>sxa 234</code> — ejects current sample, loads position 234, opens the form</li>
+            <li><code>sxa ej</code> — ejects and returns to storage, closes the annotation</li>
+        </ul>
+
+        <p>The SampleJet position is recorded automatically in the metadata. Without an
+            argument, <code>sxa</code> prompts for a position number or <code>ej</code>.</p>
+
+        <h2>Available Fields</h2>
+
+        <p>Everything is optional. Part of a typical annotation might look like:</p>
+
+        <img src="images/editing-sample-buffer.png" alt="Screenshot of editing sample buffer metadata"
+            class="screenshot">
+
+        <p>The full set of fields covers people (users, research groups), sample components
+            (name, concentration, isotopic labelling), buffer (solvent, pH, chemical shift
+            reference, components), NMR tube (diameter, type, volume, SampleJet position and
+            rack ID), laboratory references (sample ID, lab book entry), and free-form
+            notes.</p>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NMR Sample Manager for Topspin</title>
+    <link rel="stylesheet" href="css/docs.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1>NMR Sample Manager for Topspin</h1>
+            <nav class="nav">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="installation.html" class="nav-link active">Installation</a>
+                <a href="app.html" class="nav-link">Topspin App</a>
+                <a href="commands.html" class="nav-link">Topspin Commands</a>
+                <a href="https://nmr-samples.github.io/" class="nav-link">Ecosystem</a>
+                <a href="https://waudbylab.org/" class="nav-link">Waudby Lab</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="content">
+        <h1>Installation</h1>
+
+        <h2>1. Clone the Repository</h2>
+
+        <p>Choose a location where you have write permissions — your home directory for
+            single-user installations, or a shared lab directory for multi-user facilities.
+            You <strong>cannot</strong> install within TopSpin's own
+            <code>/opt/topspin...</code> directories.
+        </p>
+
+        <pre><code>cd ~
+git clone https://github.com/nmr-samples/topspin.git</code></pre>
+
+        <p>If you don't have git, download the repository as a
+            <a href="https://github.com/nmr-samples/topspin/archive/refs/heads/main.zip">ZIP file</a>
+            and extract it.
+        </p>
+
+        <h2>2. Configure TopSpin's Python Path</h2>
+
+        <p>In TopSpin, type <code>setres</code> to open the Resource Editor. Navigate to
+            <strong>Directories → Manage source directories for edpul, edau, etc.</strong>
+            In the popup, select the <strong>Jython Programs</strong> tab and add the full
+            absolute path to your <code>topspin/src</code> directory (e.g.
+            <code>/home/username/topspin/src</code> or
+            <code>/Users/username/topspin/src</code> on macOS).
+        </p>
+
+        <!-- setres screenshot -->
+        <img src="images/setres.png" alt="TopSpin setres configuration screenshot" class="screenshot">
+
+        <p>Save and restart TopSpin.</p>
+
+        <h2>3. Verify</h2>
+
+        <p>Type <code>samples</code> in TopSpin's command line. The Sample Manager window
+            should appear, showing a timeline of your experiments.</p>
+
+        <!-- samples app screenshot -->
+        <img src="images/app-screenshot.png" alt="TopSpin samples app screenshot" class="screenshot">
+
+        <h2>4. Configure root directories</h2>
+
+        <p>In the samples app, click the <strong>Settings</strong>
+            button in the bottom-left corner and add your root directories (e.g. <code>/home/user/nmr-data</code>
+            or <code>/Users/user/nmr-data</code>). These are the directories where the app searches for samples to
+            catalogue.
+        </p>
+        <img src="images/settings-root-directories.png" alt="Settings form screenshot showing root directories field"
+            class="screenshot">
+
+        <h2>Updating</h2>
+
+        <p>The app checks for updates automatically on startup (if the spectrometer is
+            online).</p>
+        <img src="images/updates.png" alt="Update notification screenshot" class="screenshot">
+        <p>To update:</p>
+
+        <pre><code>cd /path/to/topspin
+git pull</code></pre>
+
+        <p>Restart TopSpin to load the updated code.</p>
+
+        <h2>Multi-User Installations</h2>
+
+        <p>Install in a shared location accessible to all users. Each user then adds the shared path to their own
+            TopSpin configuration via <code>setres</code>.
+        </p>
+
+        <h2>Uninstallation</h2>
+
+        <p>Remove the Sample Manager path from <code>setres</code>, save, and restart
+            TopSpin. Optionally delete the <code>topspin</code> directory. Your sample
+            metadata JSON files are not affected — they remain in your data directories.</p>
+
+    </div>
+</body>
+
+</html>
