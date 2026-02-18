@@ -209,4 +209,4 @@ You know exactly what's happening at each step.
 
 **Next**: Explore the [Ecosystem](related.md) - web viewer for offline access, shared JSON schema for portability.
 
-**Questions?** [Contact us](mailto:c.waudby@ucl.ac.uk) or [open an issue](https://github.com/waudbygroup/topspin-samples/issues).
+**Questions?** [Contact us](mailto:c.waudby@ucl.ac.uk) or [open an issue](https://github.com/nmr-samples/topspin/issues).

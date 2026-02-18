@@ -75,4 +75,4 @@ Explore the [full usage guide](../usage.md) for all features and detailed docume
 
 ---
 
-Questions? [Contact us](mailto:c.waudby@ucl.ac.uk) or [open an issue](https://github.com/waudbygroup/topspin-samples/issues).
+Questions? [Contact us](mailto:c.waudby@ucl.ac.uk) or [open an issue](https://github.com/nmr-samples/topspin/issues).

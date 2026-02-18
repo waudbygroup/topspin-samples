@@ -7,7 +7,7 @@ Turn on lift air to raise/eject sample with integrated metadata management
 from java.lang import System
 from javax.swing import JOptionPane
 
-APP_KEY = "org.waudbylab.topspin-sample-manager"
+APP_KEY = "org.nmr-samples.topspin"
 
 # Testing mode - set to True to simulate XCMD calls with dialogs instead of actual execution
 TESTING_MODE = False

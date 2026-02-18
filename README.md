@@ -1,6 +1,6 @@
 # NMR Sample Manager for TopSpin
 
-[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://waudbygroup.github.io/topspin-samples/)
+[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://nmr-samples.github.io/topspin/)
 [![DOI](https://zenodo.org/badge/1073026274.svg)](https://doi.org/10.5281/zenodo.17427482)
 
 A lightweight sample metadata management system for Bruker TopSpin, built using the internal python interface.
@@ -18,7 +18,7 @@ This tool provides a simple schema for recording sample metadata, creating a lig
 
 ### Related Repository
 
-The JSON schema used by this tool is maintained separately in the [nmr-sample-schema](https://github.com/waudbygroup/nmr-sample-schema) repository. This allows the schema to be used independently in other applications and tools.
+The JSON schema used by this tool is maintained separately in the [nmr-sample-schema](https://github.com/nmr-samples/schema) repository. This allows the schema to be used independently in other applications and tools.
 
 ## Features
 
@@ -35,7 +35,7 @@ The JSON schema used by this tool is maintained separately in the [nmr-sample-sc
 1. Clone this repository to a suitable directory (N.B. you cannot use locations within `/opt/topspin...`):
    ```bash
    cd /path/to/installation/directory/
-   git clone https://github.com/waudbygroup/topspin-samples.git
+   git clone https://github.com/nmr-samples/topspin.git
    ```
 
 2. Use `setres` in Topspin and add the `src` directory within the topspin-samples folder to the python paths.

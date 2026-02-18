@@ -21,7 +21,7 @@ jobs:
       - name: Get latest schema release
         id: schema-release
         run: |
-          LATEST_TAG=$(curl -s https://api.github.com/repos/waudbygroup/nmr-sample-schema/releases/latest | jq -r .tag_name)
+          LATEST_TAG=$(curl -s https://api.github.com/repos/nmr-samples/schema/releases/latest | jq -r .tag_name)
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "Latest schema version: $LATEST_TAG"
       
@@ -43,7 +43,7 @@ jobs:
           rm -rf src/schemas
           
           # Clone the schema repository
-          git clone https://github.com/waudbygroup/nmr-sample-schema.git src/schemas
+          git clone https://github.com/nmr-samples/schema.git src/schemas
           
           # Remove the .git directory (we don't need the schema repo's git history)
           rm -rf src/schemas/.git
@@ -60,7 +60,7 @@ jobs:
           delete-branch: true
           title: "Update schemas to ${{ steps.schema-release.outputs.latest_tag }}"
           body: |
-            Automated schema update from [nmr-sample-schema](https://github.com/waudbygroup/nmr-sample-schema).
+            Automated schema update from [nmr-sample-schema](https://github.com/nmr-samples/schema).
             
             New version: ${{ steps.schema-release.outputs.latest_tag }}
             Previous version: ${{ steps.current-version.outputs.current_version }}
@@ -69,4 +69,4 @@ jobs:
             
             Please review the changes and test compatibility before merging.
             
-            Schema release: https://github.com/waudbygroup/nmr-sample-schema/releases/tag/${{ steps.schema-release.outputs.latest_tag }}
+            Schema release: https://github.com/nmr-samples/schema/releases/tag/${{ steps.schema-release.outputs.latest_tag }}

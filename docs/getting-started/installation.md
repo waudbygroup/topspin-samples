@@ -22,13 +22,13 @@ cd /path/to/shared/lab/software
 Clone the Sample Manager repository using git:
 
 ```bash
-git clone https://github.com/waudbygroup/topspin-samples.git
+git clone https://github.com/nmr-samples/topspin.git
 ```
 
 This will create a `topspin-samples` directory containing the application.
 
 !!! tip "What if I don't have git?"
-    You can download the repository as a ZIP file from [GitHub](https://github.com/waudbygroup/topspin-samples), then unzip it in your chosen location.
+    You can download the repository as a ZIP file from [GitHub](https://github.com/nmr-samples/topspin), then unzip it in your chosen location.
 
 ## Step 3: Configure TopSpin Python Path
 
@@ -97,7 +97,7 @@ For labs with multiple NMR users, we recommend:
 1. **Install in a shared location** accessible to all users:
    ```bash
    cd /opt/lab/software  # or similar shared directory
-   git clone https://github.com/waudbygroup/topspin-samples.git
+   git clone https://github.com/nmr-samples/topspin.git
    ```
 
 2. **Each user configures their own TopSpin** by adding the shared path to PYTHONPATH via `setres`
@@ -112,8 +112,8 @@ To remove Sample Manager:
 4. Optionally, delete the `topspin-samples` directory
 
 !!! info "Your data is safe"
-    Uninstalling Sample Manager does **not** delete your sample metadata JSON files. These remain in your NMR data directories and can still be viewed/edited using the [web-based viewer](https://github.com/waudbygroup/nmr-sample-viewer).
+    Uninstalling Sample Manager does **not** delete your sample metadata JSON files. These remain in your NMR data directories and can still be viewed/edited using the [web-based viewer](https://github.com/nmr-samples/online).
 
 ---
 
-Having trouble? [Contact us](mailto:c.waudby@ucl.ac.uk) or [open an issue on GitHub](https://github.com/waudbygroup/topspin-samples/issues).
+Having trouble? [Contact us](mailto:c.waudby@ucl.ac.uk) or [open an issue on GitHub](https://github.com/nmr-samples/topspin/issues).

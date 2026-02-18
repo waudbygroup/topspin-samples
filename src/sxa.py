@@ -10,7 +10,7 @@ from javax.swing import JOptionPane
 from datetime import datetime
 import sys
 
-APP_KEY = "org.waudbylab.topspin-sample-manager"
+APP_KEY = "org.nmr-samples.topspin"
 
 # Testing mode - set to True to simulate XCMD calls with dialogs instead of actual execution
 TESTING_MODE = False

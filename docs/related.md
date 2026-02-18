@@ -4,7 +4,7 @@ Sample Manager is part of an ecosystem built around a shared, open JSON schema. 
 
 ## NMR Sample Schema
 
-**Repository:** [github.com/waudbygroup/nmr-sample-schema](https://github.com/waudbygroup/nmr-sample-schema)
+**Repository:** [github.com/nmr-samples/schema](https://github.com/nmr-samples/schema)
 
 The JSON schema that defines NMR sample metadata structure is maintained independently with semantic versioning. Maintaining the schema separately allows multiple tools to use the same standard and enables version control independent of application code.
 
@@ -12,7 +12,7 @@ All tools in the ecosystem use this shared schema, ensuring compatibility and da
 
 ## NMR Sample Viewer
 
-A web-based application for viewing and editing NMR sample metadata without TopSpin. Access at [waudbylab.org/nmr-samples/](http://waudbylab.org/nmr-samples/). Note that all data is stored locally - no information leaves your computer.
+A web-based application for viewing and editing NMR sample metadata without TopSpin. Access at [nmr-samples.github.io/online/](http://nmr-samples.github.io/online/). Note that all data is stored locally - no information leaves your computer.
 
 ![Web Viewer](images/web-viewer.png)
 
@@ -23,7 +23,7 @@ Features:
 - Search and filtering across directories
 - Bulk operations for creating and editing multiple samples
 
-**Repository:** [github.com/waudbygroup/nmr-sample-viewer](https://github.com/waudbygroup/nmr-sample-viewer)
+**Repository:** [github.com/nmr-samples/online](https://github.com/nmr-samples/online)
 
 
 ## NMRTools.jl

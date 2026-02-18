@@ -146,4 +146,4 @@ If a sample requires a schema version that's not installed, an error panel displ
 
 **Next**: Learn about [Physical Sample Handling](physical-sample-handling.md) - workflow commands that capture metadata during injection/ejection.
 
-**Questions?** [Contact us](mailto:c.waudby@ucl.ac.uk) or [open an issue](https://github.com/waudbygroup/topspin-samples/issues).
+**Questions?** [Contact us](mailto:c.waudby@ucl.ac.uk) or [open an issue](https://github.com/nmr-samples/topspin/issues).

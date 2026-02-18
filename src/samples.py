@@ -35,7 +35,7 @@ from config_manager import ConfigManager
 from sample_scanner import SampleScanner
 from html_view import HTMLViewGenerator
 
-APP_KEY = "org.waudbylab.topspin-sample-manager"
+APP_KEY = "org.nmr-samples.topspin"
 
 
 class SampleManagerApp:
@@ -756,7 +756,7 @@ class SampleManagerApp:
         right_panel = JPanel(FlowLayout(FlowLayout.RIGHT))
         repo_link = JLabel("<html><a href=''>View Documentation...</a></html>")
         repo_link.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
-        repo_link.setToolTipText("https://waudbylab.org/topspin-samples/")
+        repo_link.setToolTipText("https://nmr-samples.github.io/topspin/")
 
         # Add click listener to open URL
         def open_repo(event):
@@ -766,7 +766,7 @@ class SampleManagerApp:
                 if Desktop.isDesktopSupported():
                     desktop = Desktop.getDesktop()
                     if desktop.isSupported(Desktop.Action.BROWSE):
-                        desktop.browse(URI("https://waudbylab.org/topspin-samples/"))
+                        desktop.browse(URI("https://nmr-samples.github.io/topspin/"))
             except Exception as e:
                 MSG("Could not open browser: %s" % str(e))
 
@@ -848,7 +848,7 @@ if curdata:
     full_path = os.path.join(directory, name)
     # Get the app and set directory with expno for auto-selection
     from java.lang import System
-    app = System.getProperties().get("org.waudbylab.topspin-sample-manager")
+    app = System.getProperties().get("org.nmr-samples.topspin")
     if app:
         app.set_directory(full_path, expno)
 ''')
@@ -875,7 +875,7 @@ if curdata:
     curdata_path = os.path.join(directory, name)
 
     from java.lang import System
-    app = System.getProperties().get("org.waudbylab.topspin-sample-manager")
+    app = System.getProperties().get("org.nmr-samples.topspin")
     if app:
         app._store_curdata_check_result(curdata_path)
 ''')
@@ -953,7 +953,7 @@ if curdata:
     curdata_path = os.path.join(directory, name)
 
     from java.lang import System
-    app = System.getProperties().get("org.waudbylab.topspin-sample-manager")
+    app = System.getProperties().get("org.nmr-samples.topspin")
     if app:
         app._store_curdata_check_result(curdata_path)
 ''')

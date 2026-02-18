@@ -1,9 +1,9 @@
 # MkDocs configuration for NMR Sample Manager
 site_name: NMR Sample Manager for TopSpin
 site_description: Lightweight sample management system for Bruker TopSpin
-site_url: https://waudbylab.org/topspin-samples/
-repo_url: https://github.com/waudbygroup/topspin-samples
-repo_name: waudbygroup/topspin-samples
+site_url: https://nmr-samples.github.io/topspin/
+repo_url: https://github.com/nmr-samples/topspin
+repo_name: nmr-samples/topspin
 
 theme:
   name: material
@@ -82,6 +82,6 @@ nav:
 extra:
   social:
     - icon: material/github
-      link: https://github.com/waudbygroup/topspin-samples
+      link: https://github.com/nmr-samples/topspin
     - icon: material/email
       link: mailto:c.waudby@ucl.ac.uk

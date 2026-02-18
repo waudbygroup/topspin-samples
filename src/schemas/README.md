@@ -17,6 +17,17 @@ Modern NMR experiments generate rich datasets, but associated information about 
 - Version tracking so datasets remain interpretable as the schema evolves
 - Interoperability across different tools and applications
 
+## Ecosystem
+
+Currently, sample management is implemented by two applications:
+
+- [topspin-samples](https://github.com/nmr-samples/topspin) - An integrated sample manager for Topspin (v3 upwards)
+- [nmr-samples](http://nmr-samples.github.io/online) - A web-based sample manager
+
+Support for sample information is integrated into [NOMAD](https://github.com/nomad-nmr) (v3.6.3 onwards).
+
+Sample parsing is supported by [NMRTools.jl](https://github.com/waudbygroup/NMRTools.jl), and has been integrated into [NMR TITAN](https://www.nmr-titan.com) (development version).
+
 ## Schema Versions
 
 Schemas are versioned using semantic versioning and tagged in this repository. Each dataset should record the schema version it was created with, ensuring backwards compatibility as the schema evolves.
@@ -32,6 +43,7 @@ versions/v0.0.1/schema.json
 versions/v0.0.2/schema.json
 versions/v0.0.3/schema.json
 versions/v0.1.0/schema.json
+versions/v0.2.0/schema.json
 current/schema.json
 ```
 
@@ -39,12 +51,12 @@ The `current` directory is a copy of the latest tagged release.
 
 To reference a specific schema version in your application:
 ```
-https://github.com/waudbygroup/nmr-sample-schema/blob/main/versions/v0.1.0/schema.json
+https://github.com/nmr-samples/schema/blob/main/versions/v0.2.0/schema.json
 ```
 
 To always use the latest schema:
 ```
-https://github.com/waudbygroup/nmr-sample-schema/blob/main/current/schema.json
+https://github.com/nmr-samples/schema/blob/main/current/schema.json
 ```
 
 ## Patching schema updates
@@ -79,10 +91,16 @@ Paths: JSON Pointer with `*` wildcard for array elements. Missing intermediate p
 
 This schema is used by:
 
-- [topspin-samples](https://github.com/waudbygroup/topspin-samples) - Topspin-integrated sample manager
-- [nmr-samples](http://github.com/waudbygroup/nmr-samples) - Web-based sample manager, accessed at [waudbylab.org/nmr-samples](https://waudbylab.org/nmr-samples)
+- [NMR Samples (Topspin)](https://nmr-samples.github.io/topspin) - Topspin-integrated sample manager
+- [NMR Samples (online)](https://nmr-samples.github.io/online) - Web-based sample manager
 
 ## Changelog
+
+### v0.2.0
+
+**Non-breaking changes:**
+- Moved schema from waudbygroup to new organisation, nmr-samples/schema
+- Add `metadata.schema_source` with link to schema
 
 ### v0.1.0
 

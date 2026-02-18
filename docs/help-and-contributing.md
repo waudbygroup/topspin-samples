@@ -4,7 +4,7 @@
 
 **Email:** [c.waudby@ucl.ac.uk](mailto:c.waudby@ucl.ac.uk)
 
-**GitHub Issues:** [github.com/waudbygroup/topspin-samples/issues](https://github.com/waudbygroup/topspin-samples/issues)
+**GitHub Issues:** [github.com/nmr-samples/topspin/issues](https://github.com/nmr-samples/topspin/issues)
 
 Report bugs or ask questions via GitHub Issues. Include your TopSpin version, operating system, and steps to reproduce any problems.
 
@@ -16,10 +16,10 @@ Sample Manager is open source (MIT licence). Contributions from the NMR communit
 
 ### Ways to Contribute
 
-- Report bugs or request features via [GitHub Issues](https://github.com/waudbygroup/topspin-samples/issues)
+- Report bugs or request features via [GitHub Issues](https://github.com/nmr-samples/topspin/issues)
 - Improve documentation by submitting corrections or additions
 - Write code to fix bugs or add features
-- Propose schema changes in the [nmr-sample-schema](https://github.com/waudbygroup/nmr-sample-schema) repository
+- Propose schema changes in the [nmr-sample-schema](https://github.com/nmr-samples/schema) repository
 
 ### Development Setup
 
@@ -41,7 +41,7 @@ To contribute code:
 
 ### Schema Changes
 
-If you believe there is a need to modify the sample metadata structure, propose changes in the [nmr-sample-schema](https://github.com/waudbygroup/nmr-sample-schema) repository. Schema changes require clear use cases, backwards compatibility plans, and updates to all tools in the ecosystem.
+If you believe there is a need to modify the sample metadata structure, propose changes in the [nmr-sample-schema](https://github.com/nmr-samples/schema) repository. Schema changes require clear use cases, backwards compatibility plans, and updates to all tools in the ecosystem.
 
 ---
 

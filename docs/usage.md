@@ -131,4 +131,4 @@ Sample Manager uses a persistent singleton pattern. Running `samples` multiple t
 
 ---
 
-Questions? [Contact us](mailto:c.waudby@ucl.ac.uk) or [open an issue](https://github.com/waudbygroup/topspin-samples/issues).
+Questions? [Contact us](mailto:c.waudby@ucl.ac.uk) or [open an issue](https://github.com/nmr-samples/topspin/issues).
