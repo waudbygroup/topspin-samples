@@ -30,7 +30,7 @@
 
         <p>Choose a location where you have write permissions — your home directory for
             single-user installations, or a shared lab directory for multi-user facilities.
-            You <strong>cannot</strong> install within TopSpin's own
+            You <strong>cannot</strong> install within Topspin's own
             <code>/opt/topspin...</code> directories.
         </p>
 
@@ -42,9 +42,9 @@ git clone https://github.com/nmr-samples/topspin.git</code></pre>
             and extract it.
         </p>
 
-        <h2>2. Configure TopSpin's Python Path</h2>
+        <h2>2. Configure Topspin's Python Path</h2>
 
-        <p>In TopSpin, type <code>setres</code> to open the Resource Editor. Navigate to
+        <p>In Topspin, type <code>setres</code> to open the Resource Editor. Navigate to
             <strong>Directories → Manage source directories for edpul, edau, etc.</strong>
             In the popup, select the <strong>Jython Programs</strong> tab and add the full
             absolute path to your <code>topspin/src</code> directory (e.g.
@@ -53,17 +53,17 @@ git clone https://github.com/nmr-samples/topspin.git</code></pre>
         </p>
 
         <!-- setres screenshot -->
-        <img src="images/setres.png" alt="TopSpin setres configuration screenshot" class="screenshot">
+        <img src="images/setres.png" alt="Topspin setres configuration screenshot" class="screenshot">
 
-        <p>Save and restart TopSpin.</p>
+        <p>Save and restart Topspin.</p>
 
         <h2>3. Verify</h2>
 
-        <p>Type <code>samples</code> in TopSpin's command line. The Sample Manager window
+        <p>Type <code>samples</code> in Topspin's command line. The Sample Manager window
             should appear, showing a timeline of your experiments.</p>
 
         <!-- samples app screenshot -->
-        <img src="images/app-screenshot.png" alt="TopSpin samples app screenshot" class="screenshot">
+        <img src="images/app-screenshot.png" alt="Topspin samples app screenshot" class="screenshot">
 
         <h2>4. Configure root directories</h2>
 
@@ -85,18 +85,18 @@ git clone https://github.com/nmr-samples/topspin.git</code></pre>
         <pre><code>cd /path/to/topspin
 git pull</code></pre>
 
-        <p>Restart TopSpin to load the updated code.</p>
+        <p>Restart Topspin to load the updated code.</p>
 
         <h2>Multi-User Installations</h2>
 
         <p>Install in a shared location accessible to all users. Each user then adds the shared path to their own
-            TopSpin configuration via <code>setres</code>.
+            Topspin configuration via <code>setres</code>.
         </p>
 
         <h2>Uninstallation</h2>
 
         <p>Remove the Sample Manager path from <code>setres</code>, save, and restart
-            TopSpin. Optionally delete the <code>topspin</code> directory. Your sample
+            Topspin. Optionally delete the <code>topspin</code> directory. Your sample
             metadata JSON files are not affected — they remain in your data directories.</p>
 
     </div>

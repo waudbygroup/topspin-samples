@@ -1,6 +1,6 @@
 # MkDocs configuration for NMR Sample Manager
-site_name: NMR Sample Manager for TopSpin
-site_description: Lightweight sample management system for Bruker TopSpin
+site_name: NMR Sample Manager for Topspin
+site_description: Lightweight sample management system for Bruker Topspin
 site_url: https://nmr-samples.github.io/topspin/
 repo_url: https://github.com/nmr-samples/topspin
 repo_name: nmr-samples/topspin

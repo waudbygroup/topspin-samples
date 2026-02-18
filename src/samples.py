@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 NMR Sample Manager - Main GUI Application
-Persistent Jython/Swing application for managing NMR sample metadata in TopSpin
+Persistent Jython/Swing application for managing NMR sample metadata in Topspin
 """
 
 from javax.swing import *
@@ -322,7 +322,7 @@ class SampleManagerApp:
 
         # Current dataset button (full width)
         btn_current = JButton('Go to current dataset')
-        btn_current.setToolTipText("Navigate to current TopSpin dataset")
+        btn_current.setToolTipText("Navigate to current Topspin dataset")
         btn_current.addActionListener(lambda e: self._navigate_to_curdata())
         btn_current.setAlignmentX(Component.LEFT_ALIGNMENT)
         btn_current.setMaximumSize(Dimension(32767, 28))
@@ -833,7 +833,7 @@ class SampleManagerApp:
             self.update_label.setVisible(False)
 
     def _navigate_to_curdata(self):
-        """Navigate to current TopSpin dataset directory"""
+        """Navigate to current Topspin dataset directory"""
         try:
             # CURDATA must be run in a command thread via EXEC_PYSCRIPT
             # We navigate to the parent directory (not the expno subdirectory)
@@ -856,7 +856,7 @@ if curdata:
             self.update_status("Could not navigate to CURDATA: %s" % str(e))
 
     def _check_directory_matches_curdata(self, callback=None, auto_select_after_nav=True):
-        """Check if current directory matches current TopSpin dataset, offer to change if not.
+        """Check if current directory matches current Topspin dataset, offer to change if not.
 
         Args:
             callback: Optional function to call after navigation (if user chooses to navigate)
@@ -905,7 +905,7 @@ if curdata:
             # Directories don't match - offer to change
             result = JOptionPane.showConfirmDialog(
                 self.frame,
-                "Sample manager is in:\n  %s\n\nCurrent TopSpin dataset is:\n  %s\n\nSwitch to current dataset folder?" % (
+                "Sample manager is in:\n  %s\n\nCurrent Topspin dataset is:\n  %s\n\nSwitch to current dataset folder?" % (
                     current_display, curdata_display
                 ),
                 "Switch Directory?",
@@ -984,7 +984,7 @@ if curdata:
             from javax.swing import JOptionPane
             result = JOptionPane.showConfirmDialog(
                 self.frame,
-                "Sample manager is in:\n  %s\n\nCurrent TopSpin dataset is:\n  %s\n\nSwitch to current dataset folder?" % (
+                "Sample manager is in:\n  %s\n\nCurrent Topspin dataset is:\n  %s\n\nSwitch to current dataset folder?" % (
                     current_display, curdata_display
                 ),
                 "Switch Directory?",
@@ -2558,7 +2558,7 @@ if curdata:
     def handle_timeline_double_click(self, selected_entry):
         """Handle double-click on timeline entry"""
         if selected_entry.entry_type == 'experiment' and selected_entry.filepath:
-            # Open experiment in TopSpin
+            # Open experiment in Topspin
             try:
                 # Parse directory to get dataset info
                 # filepath is like: /path/to/datadir/expname/expno
@@ -2692,7 +2692,7 @@ if curdata:
                 break
 
     def _open_experiment_from_timeline(self):
-        """Open the selected experiment in TopSpin"""
+        """Open the selected experiment in Topspin"""
         if not self._can_open_experiment_from_timeline():
             return
 

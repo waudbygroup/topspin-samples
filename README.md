@@ -1,9 +1,9 @@
-# NMR Sample Manager for TopSpin
+# NMR Sample Manager for Topspin
 
 [![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://nmr-samples.github.io/topspin/)
 [![DOI](https://zenodo.org/badge/1073026274.svg)](https://doi.org/10.5281/zenodo.17427482)
 
-A lightweight sample metadata management system for Bruker TopSpin, built using the internal python interface.
+A lightweight sample metadata management system for Bruker Topspin, built using the internal python interface.
 
 ![Screenshot - Sample editing](assets/screenshot.png)
 ![Screenshot - Experimental timeline](assets/screenshot-timeline.png)
@@ -12,7 +12,7 @@ A lightweight sample metadata management system for Bruker TopSpin, built using 
 
 ## Overview
 
-NMR workflows focus on data acquisition and processing, but sample tracking has been a longstanding blind spot. Bruker TopSpin manages *experiments* effectively, but provides no systematic way to record or retrieve information about *samples* -- e.g. protein concentrations, buffer compositions, isotopic labelling schemes, chemical shift referencing, NMR tube types. This often causes problems when looking back over old data or preparing data for repository submission.
+NMR workflows focus on data acquisition and processing, but sample tracking has been a longstanding blind spot. Bruker Topspin manages *experiments* effectively, but provides no systematic way to record or retrieve information about *samples* -- e.g. protein concentrations, buffer compositions, isotopic labelling schemes, chemical shift referencing, NMR tube types. This often causes problems when looking back over old data or preparing data for repository submission.
 
 This tool provides a simple schema for recording sample metadata, creating a lightweight, parallel system capturing sample information in JSON text files within experiment directories.
 
@@ -22,7 +22,7 @@ The JSON schema used by this tool is maintained separately in the [nmr-sample-sc
 
 ## Features
 
-- **TopSpin Integration**: Runs natively within TopSpin
+- **Topspin Integration**: Runs natively within Topspin
 - **GUI Interface**: Java Swing-based interface with form-based metadata entry
 - **Timeline View**: Chronological visualization of samples and experiments
 - **Schema Validation**: JSON Schema-based validation ensures data consistency
@@ -40,7 +40,7 @@ The JSON schema used by this tool is maintained separately in the [nmr-sample-sc
 
 2. Use `setres` in Topspin and add the `src` directory within the topspin-samples folder to the python paths.
 
-3. The application will now be available as TopSpin Python commands.
+3. The application will now be available as Topspin Python commands.
 
 4. To update the app, open a terminal and navigate to the topspin-samples folder, then pull any updates:
    ```bash
@@ -68,7 +68,7 @@ The JSON schema used by this tool is maintained separately in the [nmr-sample-sc
 
 #### Directory Navigation
 - **Browse...** - Select any NMR data directory
-- **Go to current dataset** - Navigate to TopSpin's current dataset
+- **Go to current dataset** - Navigate to Topspin's current dataset
 
 #### Sample Management
 - **New...** - Create new sample (auto-ejects previous active sample)
@@ -90,7 +90,7 @@ The JSON schema used by this tool is maintained separately in the [nmr-sample-sc
   - Blue: 2D experiments
   - Black: 1D experiments
 - Conditional holder column (shown when rack positions differ)
-- Double-click experiments to open in TopSpin
+- Double-click experiments to open in Topspin
 
 ## Data Model
 
@@ -159,7 +159,7 @@ Sample metadata is stored as human-readable JSON files:
 - **GUI Framework**: Java Swing
 - **Persistence**: Java System Properties (singleton pattern)
 - **Data Format**: JSON with JSON Schema validation
-- **TopSpin Integration**: EXEC_PYSCRIPT for command thread execution
+- **Topspin Integration**: EXEC_PYSCRIPT for command thread execution
 
 ### Key Components
 
@@ -169,7 +169,7 @@ Sample metadata is stored as human-readable JSON files:
 
 ### Singleton Pattern
 
-The application uses Java System Properties to maintain a single persistent instance across script executions within the same TopSpin session. This allows:
+The application uses Java System Properties to maintain a single persistent instance across script executions within the same Topspin session. This allows:
 - State preservation between command invocations
 - External script control of running GUI
 - Window hide/show without data loss
@@ -205,7 +205,7 @@ topspin-samples/
 
 ### Requirements
 
-- Bruker TopSpin with Jython 2.7.2
+- Bruker Topspin with Jython 2.7.2
 - Java 11 or later
 - Pure Python libraries only (no C extensions)
 

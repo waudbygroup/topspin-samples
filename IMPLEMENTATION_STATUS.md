@@ -2,7 +2,7 @@
 
 ## Summary
 
-The TopSpin Sample Manager Jython/Swing application has been **fully implemented** and is ready for testing in the TopSpin environment.
+The Topspin Sample Manager Jython/Swing application has been **fully implemented** and is ready for testing in the Topspin environment.
 
 ## Completed Components
 
@@ -89,7 +89,7 @@ src/
 - ✓ Sample creation and ejection events
 - ✓ Experiment detection (integer directories + acqus file)
 - ✓ Experiment details (pulprog, nucleus, scan count)
-- ✓ Double-click to open experiment in TopSpin (implemented)
+- ✓ Double-click to open experiment in Topspin (implemented)
 
 ### Integration
 - ✓ Singleton pattern for persistent state
@@ -104,7 +104,7 @@ src/
 Before using in production, test the following:
 
 ### Basic Functionality
-- [ ] Run `samples` command from TopSpin - GUI appears
+- [ ] Run `samples` command from Topspin - GUI appears
 - [ ] Navigate to current dataset - correct directory shown
 - [ ] Browse to different directory - sample list updates
 - [ ] Close window and run `samples` again - same instance appears
@@ -126,7 +126,7 @@ Before using in production, test the following:
 - [ ] Sample events appear chronologically
 - [ ] Experiments detected (integer dirs with acqus)
 - [ ] Experiment details shown (pulprog, etc.)
-- [ ] Double-click experiment opens in TopSpin
+- [ ] Double-click experiment opens in Topspin
 
 ### Integration Commands
 - [ ] `aij` creates new sample injection entry
@@ -152,12 +152,12 @@ Before using in production, test the following:
 
 1. **Physical Injection/Ejection Commands**
    - Currently using `MSG()` placeholders
-   - Need to determine correct TopSpin commands (XCMD? custom?)
-   - Check TopSpin documentation or existing AU programs
+   - Need to determine correct Topspin commands (XCMD? custom?)
+   - Check Topspin documentation or existing AU programs
 
 2. **Experiment Opening**
    - Double-click timeline entry calls `RE()` function
-   - May need adjustment based on TopSpin version/configuration
+   - May need adjustment based on Topspin version/configuration
    - Need to properly parse NAME/EXPNO/PROCNO from directory structure
 
 3. **Form Validation**
@@ -175,14 +175,14 @@ Before using in production, test the following:
 
 ## Next Steps
 
-1. **Testing in TopSpin Environment**
-   - Copy `src/` directory to TopSpin Python scripts location
+1. **Testing in Topspin Environment**
+   - Copy `src/` directory to Topspin Python scripts location
    - Test all functionality with real NMR data
    - Verify CURDATA() navigation works correctly
    - Test with actual experiment directories
 
 2. **Determine Physical Commands**
-   - Research TopSpin commands for sample injection/ejection
+   - Research Topspin commands for sample injection/ejection
    - Update `aij.py` and `aej.py` with real commands
    - Test with SampleJet if available
 
@@ -198,7 +198,7 @@ Before using in production, test the following:
 
 ## Installation Instructions
 
-1. Copy the `src/` directory to your TopSpin Python user scripts directory:
+1. Copy the `src/` directory to your Topspin Python user scripts directory:
    ```
    /opt/topspin4.4.0/exp/stan/nmr/py/user/sample-manager/
    ```
@@ -211,7 +211,7 @@ Before using in production, test the following:
 
    Note: The GitHub Actions workflow will automatically sync schema updates from the schema repository.
 
-3. Run from TopSpin command line:
+3. Run from Topspin command line:
    ```
    samples    # Main GUI
    aij        # Auto-inject
@@ -222,7 +222,7 @@ Before using in production, test the following:
 
 - Application uses System Properties singleton pattern - state persists across script runs
 - Window close hides (not disposes) to preserve state
-- Use Quit button or restart TopSpin for fresh instance
+- Use Quit button or restart Topspin for fresh instance
 - All scripts must be in same directory to share lib modules
 - JSON files compatible with web app (same schema)
 

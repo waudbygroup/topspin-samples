@@ -1,10 +1,10 @@
-# Testing Guide - TopSpin Sample Manager
+# Testing Guide - Topspin Sample Manager
 
 ## Quick Start Testing
 
 ### 1. Launch the Application
 
-From TopSpin command line:
+From Topspin command line:
 ```
 samples
 ```
@@ -81,7 +81,7 @@ Expected behavior:
 1. In timeline view, double-click on an experiment entry
 
 Expected behavior:
-- Experiment opens in TopSpin (via `RE()` command)
+- Experiment opens in Topspin (via `RE()` command)
 - Status bar shows confirmation
 
 ### 8. Test Persistence
@@ -98,7 +98,7 @@ Expected behavior:
 
 #### Auto-Inject (aij)
 
-From TopSpin command line:
+From Topspin command line:
 ```
 aij
 ```
@@ -111,7 +111,7 @@ Expected behavior:
 
 #### Auto-Eject (aej)
 
-From TopSpin command line:
+From Topspin command line:
 ```
 aej
 ```
@@ -255,7 +255,7 @@ Verify:
 4. Reload in Jython app
 5. Verify bidirectional compatibility
 
-### TopSpin Integration
+### Topspin Integration
 
 1. Run from different dataset locations
 2. Test `CURDATA()` navigation across different experiments
@@ -314,7 +314,7 @@ Print this checklist and mark off as you test:
 ## Reporting Issues
 
 When reporting issues, please include:
-1. TopSpin version
+1. Topspin version
 2. Jython version (should be 2.7.2)
 3. Operating system
 4. Exact error message (if any)
