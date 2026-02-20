@@ -21,7 +21,7 @@ Modern NMR experiments generate rich datasets, but associated information about 
 
 Currently, sample management is implemented by two applications:
 
-- [topspin-samples](https://github.com/nmr-samples/topspin) - An integrated sample manager for Topspin (v3 upwards)
+- [topspin-samples](https://github.com/nmr-samples/topspin) - An integrated sample manager for TopSpin (v3 upwards)
 - [nmr-samples](http://nmr-samples.github.io/online) - A web-based sample manager
 
 Support for sample information is integrated into [NOMAD](https://github.com/nomad-nmr) (v3.6.3 onwards).
@@ -91,7 +91,7 @@ Paths: JSON Pointer with `*` wildcard for array elements. Missing intermediate p
 
 This schema is used by:
 
-- [NMR Samples (Topspin)](https://nmr-samples.github.io/topspin) - Topspin-integrated sample manager
+- [NMR Samples (TopSpin)](https://nmr-samples.github.io/topspin) - TopSpin-integrated sample manager
 - [NMR Samples (online)](https://nmr-samples.github.io/online) - Web-based sample manager
 
 ## Changelog

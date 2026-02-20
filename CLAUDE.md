@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Sample manager for NMR spectroscopy
 
-We are creating a sample management system - in this instance, to run within Bruker Topspin, but as part of a broader ecosystem
+We are creating a sample management system - in this instance, to run within Bruker TopSpin, but as part of a broader ecosystem
 defined by a metadata schema.
 
 ## Background
 
 NMR workflows focus on data acquisition and processing, but sample tracking has been a longstanding blind spot. Bruker software manages *experiments* effectively, but provides no systematic way to record or retrieve information about *samples* -- e.g. protein concentrations, buffer compositions, isotopic labelling schemes, chemical shift referencing, NMR tube types. This often causes problems when looking back over old data or preparing data for repository submission.
 
-Here we describe a simple JSON schema for recording sample metadata, creating a lightweight, parallel system that captures sample information alongside Topspin workflows.
+Here we describe a simple JSON schema for recording sample metadata, creating a lightweight, parallel system that captures sample information alongside TopSpin workflows.
 
 ## Data Model
 
@@ -89,7 +89,7 @@ Screenshots are provided in the info folder and should be examined for context.
 ### Core Design Principles
 
 - **Standalone web application**: No servers or complex installation required
-- **Topspin integration**: Using jython interface with Java Swing gui
+- **TopSpin integration**: Using jython interface with Java Swing gui
 - **Schema-driven**: JSON Schema defines data structure and validation
 - **Human-readable storage**: JSON files for metadata persistence
 - **Version control friendly**: Text-based storage with clear schema versioning
@@ -110,7 +110,7 @@ Screenshots are provided in the info folder and should be examined for context.
 │  ├─ JSON files (sample metadata)             │
 │  └─ Favourites/templates                     │
 │                                               │
-├─ Topspin Integration ───────────────────────┤
+├─ TopSpin Integration ───────────────────────┤
 │  ├─ aij/aej commands (Python scripts)        │
 │  ├─ Directory navigation                     │
 │  └─ Sample logging                           │
@@ -121,7 +121,7 @@ Screenshots are provided in the info folder and should be examined for context.
 
 
 
-# Building Persistent GUI Applications in Jython for Topspin
+# Building Persistent GUI Applications in Jython for TopSpin
 
 ## Development Environment
 
@@ -141,7 +141,7 @@ Screenshots are provided in the info folder and should be examined for context.
 
 ## The Core Problem
 
-Topspin's Jython environment executes each script in a separate namespace. This means:
+TopSpin's Jython environment executes each script in a separate namespace. This means:
 - Traditional Python global variables don't persist between script executions
 - Running the same GUI script multiple times creates multiple windows
 - No easy way to maintain application state across script runs
@@ -433,9 +433,9 @@ def update_display(self):
 5. Close control script → GUI remains in memory
 
 ### State Persistence
-- State persists as long as Topspin (JVM) is running
+- State persists as long as TopSpin (JVM) is running
 - Closing the window hides it but preserves state
-- Restarting Topspin clears all state
+- Restarting TopSpin clears all state
 - For true persistence, implement file-based save/load
 
 ## Common Patterns
@@ -515,8 +515,8 @@ class YourApplication:
 **Solution**: Change default close operation to `HIDE_ON_CLOSE`
 
 ### Problem: External Script Can't Find App
-**Cause**: Main GUI was never started or Topspin was restarted  
-**Solution**: Ensure main script runs first; restart Topspin clears everything
+**Cause**: Main GUI was never started or TopSpin was restarted  
+**Solution**: Ensure main script runs first; restart TopSpin clears everything
 
 ### Problem: Syntax Error in MSG()
 **Cause**: Newlines or special characters in message string  
@@ -524,19 +524,19 @@ class YourApplication:
 
 ## Notes
 
-- State only persists within a single Topspin session
-- Restarting Topspin clears all system properties
+- State only persists within a single TopSpin session
+- Restarting TopSpin clears all system properties
 - For persistence across sessions, implement file-based save/load using JSON
 - All scripts must use the exact same `APP_KEY` value
 - The singleton pattern works because all scripts share the same JVM instance
 
 ---
 
-# Topspin Sample Manager Implementation Plan
+# TopSpin Sample Manager Implementation Plan
 
 ## Project Overview
 
-Build a **standalone Jython/Swing application** that runs entirely within Topspin, using the same JSON schema for compatibility with the existing web app. The application will be completely independent - no interaction with the web app.
+Build a **standalone Jython/Swing application** that runs entirely within TopSpin, using the same JSON schema for compatibility with the existing web app. The application will be completely independent - no interaction with the web app.
 
 ## Core Requirements
 
@@ -579,7 +579,7 @@ Build a **standalone Jython/Swing application** that runs entirely within Topspi
 - **Experiment directories**: Integer-named folders containing `acqus` file
 - **Sample events**: Created/Ejected with timestamps
 - **Sorting**: Chronological order by timestamp/directory number
-- **Double-click**: Open dataset in Topspin when user double-clicks experiment
+- **Double-click**: Open dataset in TopSpin when user double-clicks experiment
 - **Reference**: See `info/js/file-manager.js` for web app parsing logic
 
 ### File Naming Convention
@@ -588,7 +588,7 @@ YYYY-MM-DD_HHMMSS_samplename.json
 2025-08-21_143022_lysozyme.json
 ```
 
-## Topspin API Functions
+## TopSpin API Functions
 
 ### Core Functions Available
 ```python
@@ -613,7 +613,7 @@ import os    # File system operations
 ### API Functions Needing Documentation/Placeholders
 ```python
 # TODO: Check documentation or use placeholders
-# Opening datasets in Topspin - RE()? XCMD()?
+# Opening datasets in TopSpin - RE()? XCMD()?
 # Getting current user - GETPAR? System property?
 # Physical inject command - MSG("Inject sample now!") for now
 # Physical eject command - MSG("Eject sample now!") for now
@@ -674,7 +674,7 @@ import os    # File system operations
 - [x] Parse sample timestamps
 - [x] Merge and sort chronologically
 - [x] Display in table/list
-- [x] Double-click to open dataset in Topspin
+- [x] Double-click to open dataset in TopSpin
 
 ### Phase 5: Integration Commands ✓ COMPLETE
 - [x] `aij` - retrieve app, call inject method
@@ -688,7 +688,7 @@ import os    # File system operations
 - [x] GitHub Actions workflow for schema syncing
 - [ ] Keyboard shortcuts
 - [ ] Help/documentation
-- [ ] Real-world testing in Topspin environment
+- [ ] Real-world testing in TopSpin environment
 
 ## Schema Version Management
 
@@ -728,7 +728,7 @@ This approach ensures that:
 
 ### Why Independent from Web App?
 - **Different environments** - Web (File System Access API) vs. Jython (file I/O)
-- **Different use cases** - Web for general use, Topspin for integrated workflow
+- **Different use cases** - Web for general use, TopSpin for integrated workflow
 - **Same data** - Both read/write identical JSON files following same schema
 
 ### Sample Injection/Ejection Workflow
@@ -756,7 +756,7 @@ User workflow:
 
 ## Reference Materials
 
-- **Topspin Jython API**: `info/python-programming.pdf`
+- **TopSpin Jython API**: `info/python-programming.pdf`
 - **Web app code**: `info/js/*.js` (for timeline parsing logic)
 - **Screenshots**: `info/*.png` (for UI reference)
 - **Schema**: `src/schemas/current/schema.json`
@@ -764,7 +764,7 @@ User workflow:
 ## Development Notes
 
 - Use `MSG()` for debugging during development
-- Test with real Topspin data directories
+- Test with real TopSpin data directories
 - Follow Jython 2.7.2 syntax (no Python 3 features)
 - Keep forms simple but functional - usability over aesthetics
 - Prioritize correctness of data handling over GUI polish
