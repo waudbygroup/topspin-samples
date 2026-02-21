@@ -1,6 +1,6 @@
 {
     "title": "NMR Sample Metadata",
-    "description": "Schema for NMR sample metadata collection in Topspin environments",
+    "description": "Schema for NMR sample metadata collection in TopSpin environments",
     "type": "object",
     "additionalProperties": false,
     "required": [],
